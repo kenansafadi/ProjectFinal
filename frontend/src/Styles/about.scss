@@ -1,0 +1,108 @@
+/* Add styling for the About page */
+.about-container {
+    padding: 20px;
+    font-size: 1rem;
+    height: 75vh;
+    line-height: 1.5;
+    color: #333;
+    background-color: #f8f9fa;
+
+    h1 {
+        font-size: 2.5rem;
+        color: #007bff;
+    }
+
+    p {
+        font-size: 1.1rem;
+        color: #555;
+    }
+
+    ul {
+        list-style-type: disc;
+        margin-left: 20px;
+    }
+
+    ul li {
+        font-size: 1rem;
+        color: #333;
+    }
+
+    /* Modify for dark mode */
+    body.dark-mode & {
+        background-color: #222;
+        color: #ddd;
+
+        h1 {
+            color: #3498db;
+        }
+
+        p {
+            color: #ccc;
+        }
+
+        ul li {
+            color: #ccc;
+        }
+    }
+
+    /* Mobile responsiveness */
+    @media (max-width: 768px) {
+        padding: 15px;
+        font-size: 0.9rem;
+        height: auto;
+        max-width: 100%;
+        width: 90%;
+
+        h1 {
+            font-size: 2rem;
+        }
+
+        p {
+            font-size: 1rem;
+        }
+
+        ul {
+            margin-left: 15px;
+        }
+
+        ul li {
+            font-size: 0.9rem;
+        }
+    }
+
+    @media (max-width: 480px) {
+        padding: 10px;
+        font-size: 0.85rem;
+        max-width: 100%;
+        width: 90%;
+
+        h1 {
+            font-size: 1.75rem;
+        }
+
+        p {
+            font-size: 0.95rem;
+        }
+
+        ul {
+            margin-left: 10px;
+        }
+
+        ul li {
+            font-size: 0.85rem;
+        }
+    }
+}
+
+/* Dark mode only for the footer */
+body.dark-mode footer {
+    background-color: #444;
+    /* Darker background for footer */
+    color: #fff;
+    /* Lighter text for footer */
+}
+
+body.dark-mode footer a {
+    color: #3498db;
+    /* Blue link color in dark mode */
+}

@@ -1,0 +1,35 @@
+// src/Styles/messages.scss
+.messages-page {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    padding: 1rem;
+
+    .chat-info {
+        margin-bottom: 1rem;
+    }
+
+    .chat-box {
+        flex: 1;
+        overflow-y: auto;
+        margin-bottom: 1rem;
+        border: 1px solid #ccc;
+        padding: 1rem;
+        border-radius: 8px;
+        background: #f9f9f9;
+    }
+
+    .message-input {
+        display: flex;
+        gap: 0.5rem;
+
+        input {
+            flex: 1;
+            padding: 0.5rem;
+        }
+
+        button {
+            padding: 0.5rem 1rem;
+        }
+    }
+}
