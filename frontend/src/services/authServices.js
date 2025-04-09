@@ -1,4 +1,6 @@
 import API_BASE_URL from "../utils/api";
+import { getToken, setToken } from "../utils/jwtHelper"; // Importing token helper functions
+
 export const loginUser = async (email, password) => {
     try {
         const response = await fetch(`${API_BASE_URL}/auth/login`, {
@@ -12,6 +14,12 @@ export const loginUser = async (email, password) => {
         }
 
         const data = await response.json();
+
+        // Save the token in cookies
+        if (data.token) {
+            setToken(data.token); // Save token if login is successful
+        }
+
         return data; // Return user data
     } catch (error) {
         console.error("Login failed:", error);
@@ -19,7 +27,7 @@ export const loginUser = async (email, password) => {
     }
 };
 
-// New function for forgot password
+// Forgot password request
 export const forgotPassword = async (email) => {
     try {
         const response = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
@@ -38,9 +46,9 @@ export const forgotPassword = async (email) => {
         console.error("Forgot password error:", error);
         throw error;
     }
-
 };
 
+// Reset password request
 export const resetPassword = async (token, newPassword) => {
     try {
         const response = await fetch(`${API_BASE_URL}/auth/reset-password`, {
@@ -60,11 +68,17 @@ export const resetPassword = async (token, newPassword) => {
         throw error;
     }
 };
+
+// Register new user
 export const registerUser = async (userData) => {
     try {
+        const token = getToken(); // Retrieve token from cookies if present
         const response = await fetch(`${API_BASE_URL}/auth/register`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": token ? `Bearer ${token}` : "", // Send token if it exists
+            },
             body: JSON.stringify(userData),
         });
 
