@@ -3,21 +3,24 @@ const postServices = require("../services/PostService");
 const User = require("../model/usersModel");
 const io = require('socket.io');  // Assuming socket.io is configured
 
-// CREATE POST
-const createPost = async (req, res) => {
-    try {
-        const { content, image } = req.body;
-        const newPost = new Post({
-            user: req.user.id,
-            content,
-            image,
-        });
 
-        await newPost.save();
-        res.status(201).json(newPost);
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
+const createPost = async (req, res) => {
+   try {
+      const { title, content } = req.body;
+
+      const payload = {
+         title,
+         content,
+         userId: req.user.id,
+      };
+
+      const post = new Post(payload);
+      await post.save();
+
+      res.status(201).json({ message: 'Post created successfully', status: 201 });
+   } catch (error) {
+      res.status(500).json({ message: 'Server Error', status: 500 });
+   }
 };
 
 // GET POSTS

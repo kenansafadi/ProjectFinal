@@ -63,4 +63,49 @@ const sendResetEmail = async (emailConfig, email, resetLink) => {
     }
 };
 
-module.exports = { sendResetEmail };
+const sendEmail = async (email, subject, html) => {
+   try {
+      const transporter = nodemailer.createTransport({
+         service: 'gmail',
+         auth: {
+            user: 'kensaf23@gmail.com', // process.env.EMAIL_USER,
+            pass: process.env.EMAIL_PASS,
+         },
+      });
+
+      const mailOptions = {
+         from: process.env.EMAIL_SENDER,
+         to: email,
+         subject,
+         html,
+      };
+
+      await transporter.sendMail(mailOptions);
+   } catch (error) {
+      console.log(error);
+      throw new Error('Failed to send email');
+   }
+};
+
+const registration_template = (username, verificationLink) => `
+<p>Welcome ${username}! Please click the link below to verify your account:</p>
+<a href="${verificationLink}" target="_blank">${verificationLink}</a>
+`;
+
+const verification_template = (username, verificationLink) => `
+<p>Welcome ${username}! Please click the link below to verify your account:</p>
+<a href="${verificationLink}" target="_blank">${verificationLink}</a>
+`;
+
+const resetPassword_template = (username, resetLink) => `
+<p>Welcome ${username}! Please click the link below to reset your password:</p>
+<a href="${resetLink}" target="_blank">${resetLink}</a>
+`;
+
+module.exports = {
+   sendResetEmail,
+   sendEmail,
+   registration_template,
+   verification_template,
+   resetPassword_template,
+};
