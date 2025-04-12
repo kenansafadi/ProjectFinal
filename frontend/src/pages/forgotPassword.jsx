@@ -1,61 +1,73 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import "../../Styles/forgotPassword.scss"; // Import SCSS styles
-import { forgotPassword } from "../services/authServices";
+import { useState } from 'react';
+import { post } from '../utils/request';
+
+const BACKEND_API_URL = import.meta.env.VITE_BACKEND_API_URL;
+
 const ForgotPassword = () => {
-    const [email, setEmail] = useState("");
-    const [error, setError] = useState("");
-    const [success, setSuccess] = useState("");
-    const [loading, setLoading] = useState(false);
-    const navigate = useNavigate(); // Use navigate instead of useHistory
+   const [email, setEmail] = useState('');
+   const [success, setSuccess] = useState('');
+   const [error, setError] = useState('');
 
-    const handleSubmit = async (e) => {
-        e.preventDefault(); // Prevent default form submission
-        setLoading(true); // Start loading state
-        setError(""); // Clear previous errors
-        setSuccess(""); // Clear previous success messages
+   const handleSubmit = async (e) => {
+      try {
+         e.preventDefault();
 
-        try {
-            // Make the API call to the backend to send the reset password email
-            const message = await forgotPassword(email);
+         if (!email) {
+            setError('Email is required');
+            return;
+         }
 
-            // If successful, set the success message
-            setSuccess(message);
+         const res = await post(`${BACKEND_API_URL}/auth/forgot-password`, {
+            email,
+         });
 
-            // After 3 seconds, navigate to the login page
-            setTimeout(() => navigate("/login"), 3000);
-        } catch (err) {
-            // If there's an error, catch it and display the error message
-            setError(err.message || "An error occurred. Please try again.");
-        } finally {
-            // Once done (whether successful or not), stop the loading state
-            setLoading(false);
-        }
-    };
+         const data = await res.json();
 
+         if (data.status == 400) {
+            setError(data.message);
+            return;
+         }
 
-    return (
-        <div className="forgot-password-container">
-            <h1>Forgot Password</h1>
-            <form onSubmit={handleSubmit} className="forgot-password-form">
-                <div className="form-group">
-                    <label htmlFor="email">Email</label>
-                    <input
-                        type="email"
-                        id="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
-                    />
-                </div>
-                {error && <p className="error-message">{error}</p>}
-                {success && <p className="success-message">{success}</p>}
-                <button type="submit" disabled={loading}>
-                    {loading ? "Sending..." : "Send Reset Link"}
-                </button>
+         setSuccess(data.message);
+      } catch (err) {
+         setError(err.message);
+      } finally {
+         setTimeout(() => {
+            setError('');
+            setSuccess('');
+         }, 3000);
+      }
+   };
+
+   return (
+      <div className='flex items-center justify-center min-h-screen bg-gray-100'>
+         <div className='max-w-md mx-auto mt-10 p-6 bg-white shadow-md rounded-lg'>
+            {error && (
+               <p className='mt-4 text-red-600 text-sm bg-red-100 p-1 rounded-md'>{error}</p>
+            )}
+            {success && (
+               <p className='mt-4 text-green-600 text-sm bg-green-100 p-1 rounded-md'>{success}</p>
+            )}
+            <h2 className='text-2xl font-bold mb-4 text-center'>Forgot Password</h2>
+            <form onSubmit={handleSubmit}>
+               <input
+                  type='text'
+                  className='w-full p-2 border rounded mb-4'
+                  placeholder='Enter your email'
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+               />
+               <button
+                  type='submit'
+                  className='w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700'
+               >
+                  Send Reset Email
+               </button>
             </form>
-        </div>
-    );
+         </div>
+      </div>
+   );
 };
 
 export default ForgotPassword;

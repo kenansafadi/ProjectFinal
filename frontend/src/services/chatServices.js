@@ -1,59 +1,103 @@
-// services/ChatService.js
-import socket from "../utils/socket";
-import { getToken } from "../utils/jwtHelper";
-import API_BASE_URL from "../utils/api";
+// // services/ChatService.js
+// import socket from "../utils/socket";
+// import { getToken } from "../utils/jwtHelper";
+// import API_BASE_URL from "../utils/api";
 
-const ChatService = {
-    // Connect to the chat room for a user (Real-time)
-    connect: (onNewMessage) => {
-        const token = getToken();
-        socket.emit("register", token); // 🔐 Register the user with socket server
+// const ChatService = {
+//     // Connect to the chat room for a user (Real-time)
+//     connect: (onNewMessage) => {
+//         const token = getToken();
+//         socket.emit("register", token); // 🔐 Register the user with socket server
 
-        socket.on("receiveMessage", (message) => {
-            onNewMessage(message);
-        });
+//         socket.on("receiveMessage", (message) => {
+//             onNewMessage(message);
+//         });
 
-        socket.on("messagesSeen", (userId) => {
-            console.log(`Messages for user ${userId} have been marked as seen.`);
-        });
-    },
+//         socket.on("messagesSeen", (userId) => {
+//             console.log(`Messages for user ${userId} have been marked as seen.`);
+//         });
+//     },
 
-    // Send a new message to the chat room (Real-time)
-    sendMessage: (chatId, messageData) => {
-        const token = getToken();
-        socket.emit("sendMessage", { chatId, ...messageData, token }); // Emit message to server
-    },
+//     // Send a new message to the chat room (Real-time)
+//     sendMessage: (chatId, messageData) => {
+//         const token = getToken();
+//         socket.emit("sendMessage", { chatId, ...messageData, token }); // Emit message to server
+//     },
 
-    // Mark messages as seen (Real-time)
-    markMessagesAsSeen: (userId) => {
-        socket.emit("markMessagesAsSeen", userId); // Notify server to mark messages as seen
-    },
+//     // Mark messages as seen (Real-time)
+//     markMessagesAsSeen: (userId) => {
+//         socket.emit("markMessagesAsSeen", userId); // Notify server to mark messages as seen
+//     },
 
-    // Fetch chat messages for a specific user (Initial load / Historical Data)
-    fetchChatMessages: async (userId) => {
-        const token = getToken();
+//     // Fetch chat messages for a specific user (Initial load / Historical Data)
+//     fetchChatMessages: async (userId) => {
+//         const token = getToken();
 
-        const response = await fetch(`${API_BASE_URL}/chat/${userId}`, {
-            method: "GET",
-            headers: {
-                Authorization: `Bearer ${token}`,
-            },
-            credentials: "include",
-        });
+//         const response = await fetch(`${API_BASE_URL}/chat/${userId}`, {
+//             method: "GET",
+//             headers: {
+//                 Authorization: `Bearer ${token}`,
+//             },
+//             credentials: "include",
+//         });
 
-        if (!response.ok) {
-            throw new Error("Failed to fetch chat messages");
-        }
+//         if (!response.ok) {
+//             throw new Error("Failed to fetch chat messages");
+//         }
 
-        return response.json(); // Return the chat history
-    },
+//         return response.json(); // Return the chat history
+//     },
 
-    // Disconnect from the socket server
-    disconnect: () => {
-        socket.disconnect();
-    },
+//     // Disconnect from the socket server
+//     disconnect: () => {
+//         socket.disconnect();
+//     },
+// };
+
+// // Export ChatService as default
+// export default ChatService;
+
+import io from 'socket.io-client';
+let socket = null;
+
+const socketService = {
+   connect: (token, callback) => {
+      socket = io(import.meta.env.VITE_SOCKET_URL, {
+         auth: { token },
+      });
+
+      socket.on('connect', () => {
+         if (callback) {
+            callback();
+         }
+      });
+
+      socket.on('disconnect', () => {
+         console.log('Disconnected from socket server');
+      });
+   },
+
+   errorHandle: (handler) => {
+      socket.on('connect_error', handler);
+   },
+
+   disconnect: () => {
+      if (socket) {
+         socket.disconnect();
+      }
+   },
+
+   sendMessage: (messageData) => {
+      socket.emit('SendMessage', { ...messageData });
+   },
+
+   receiveMessage: (handler) => {
+      socket.on('ReceiveMessage', handler);
+   },
+
+   fetchChatMessages: (userId) => {
+      socket.emit('fetchChatMessages', userId);
+   },
 };
 
-// Export ChatService as default
-export default ChatService;
-
+export default socketService;

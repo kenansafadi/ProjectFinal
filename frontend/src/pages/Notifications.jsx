@@ -1,48 +1,82 @@
-// Notifications.jsx
-import React, { useEffect } from "react";
-import { connectNotifications, disconnectNotifications } from "../services/NotificationService";
-import { useNotifications } from "../components/hooks/useNotifications";
-import { fetchNotifications } from "../services/NotificationServices";
-import { useProfile } from "../context/ProfileContext"; // Import the ProfileContext
+import React from 'react';
+import { Bell, Heart, MessageCircle, UserPlus } from 'lucide-react';
+import moment from 'moment';
+import { Link, useSearchParams } from 'react-router-dom';
+import { ArrowLeft } from 'lucide-react';
+import { get, post } from '../utils/request';
+import { useState, useEffect } from 'react';
 
-const Notifications = () => {
-    const { notifications, addNotification } = useNotifications();
-    const { user } = useProfile(); // Retrieve user from ProfileContext
+const BACKEND_API_URL = import.meta.env.VITE_BACKEND_API_URL;
 
-    // Make sure user is loaded before attempting to fetch notifications
-    useEffect(() => {
-        if (user) {
-            // Fetch initial notifications
-            fetchNotifications()
-                .then((res) => {
-                    res.forEach(addNotification); // Assuming res is now an array of notifications
-                })
-                .catch((err) => console.error("Failed to load notifications", err));
+const NotificationPage = () => {
+   const [notification, setNotification] = useState({});
+   const id = useSearchParams()[0]?.get('id');
 
-            // Connect to socket notifications
-            connectNotifications(user.id, addNotification);
+   const handleMarkAsRead = async () => {
+      try {
+         await post(`${BACKEND_API_URL}/notifications/mark-as-read`, {
+            notificationId: id,
+         });
+      } catch (error) {}
+   };
 
-            return () => {
-                // Cleanup the socket connection on unmount
-                disconnectNotifications();
-            };
-        }
-    }, [user, addNotification]); // Only run if user exists
+   useEffect(() => {
+      const fetchNotifications = async () => {
+         try {
+            const response = await get(`${BACKEND_API_URL}/notifications/${id}`);
+            const data = await response.json();
 
-    if (!user) {
-        return <div>Loading...</div>; // You can show a loading state if user is not yet available
-    }
+            setNotification(data);
+         } catch (error) {
+            console.log(error);
+            setNotification({});
+         }
+      };
 
-    return (
-        <div className="notifications-page">
-            <h2>Notifications</h2>
-            <ul>
-                {notifications.map((n) => (
-                    <li key={n.id}>{n.message}</li> // Ensure each notification has a unique 'id'
-                ))}
-            </ul>
-        </div>
-    );
+      if (id) {
+         fetchNotifications();
+         handleMarkAsRead();
+      }
+   }, [id]);
+
+   const renderIcon = (type) => {
+      switch (type) {
+         case 'like':
+            return <Heart className='text-red-500' size={20} />;
+         case 'comment':
+            return <MessageCircle className='text-blue-500' size={20} />;
+         case 'follow':
+            return <UserPlus className='text-green-500' size={20} />;
+         default:
+            return <Bell className='text-gray-400' size={20} />;
+      }
+   };
+
+   return (
+      <div className='max-w-2xl mx-auto px-4 py-8'>
+         <div className='flex justify-between items-center'>
+            <h1 className='text-2xl font-bold mb-6'>Notifications</h1>
+            <Link to='/'>
+               <ArrowLeft className='text-gray-400' size={20} />
+            </Link>
+         </div>
+
+         <div className='bg-white flex flex-col items-start gap-4 p-4 rounded-lg shadow hover:shadow-md transition border border-blue-500'>
+            <div>{renderIcon(notification?.type)}</div>
+
+            <div className='flex-1'>
+               <p className='text-gray-700 text-sm'>
+                  From : <span className='font-medium'>{notification?.sender_name}</span>{' '}
+               </p>
+               <p className='text-xs text-gray-400 mt-1'>
+                  {moment(notification?.createdAt).fromNow()}
+               </p>
+            </div>
+
+            <p>{notification?.text}</p>
+         </div>
+      </div>
+   );
 };
 
-export default Notifications;
+export default NotificationPage;

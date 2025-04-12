@@ -80,12 +80,7 @@ const Navbar = ({ onSearch }) => {
                         <li>
                             <button onClick={handleLogout}>Logout</button>
                         </li>
-                        <li>
-                            <NavLink to="/profile" className={({ isActive }) => (isActive ? 'active-link' : '')}>
-                                <FontAwesomeIcon />
 
-                            </NavLink>
-                        </li>
                     </>
                 ) : (
                     <>

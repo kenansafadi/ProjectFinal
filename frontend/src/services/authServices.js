@@ -18,6 +18,9 @@ export const loginUser = async (email, password) => {
         // Save the token in cookies
         if (data.token) {
             setToken(data.token); // Save token if login is successful
+
+            console.log("Token:", data.token);
+
         }
 
         return data; // Return user data
@@ -51,10 +54,10 @@ export const forgotPassword = async (email) => {
 // Reset password request
 export const resetPassword = async (token, newPassword) => {
     try {
-        const response = await fetch(`${API_BASE_URL}/auth/reset-password`, {
+        const response = await fetch(`${API_BASE_URL}/api/auth/reset-password/${token}`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ token, newPassword }),
+            body: JSON.stringify({ newPassword }), // no token in body anymore
         });
 
         const data = await response.json();
@@ -82,21 +85,38 @@ export const registerUser = async (userData) => {
             body: JSON.stringify(userData),
         });
 
+        const data = await response.json(); // Parse the response as JSON
+
         if (!response.ok) {
-            const data = await response.text(); // Get the response as text first
-            try {
-                // Attempt to parse JSON if possible
-                const jsonResponse = JSON.parse(data);
-                throw new Error(jsonResponse.message || "Registration failed.");
-            } catch (e) {
-                throw new Error("Unknown error occurred.", e);
-            }
+            // Log the server response in case of error
+            console.error("Registration failed. Server response:", data);
+            throw new Error(data.message || "Registration failed.");
         }
 
-        const data = await response.json();
+        console.log("Token:", data.token);  // Now that data is available, you can safely log it
+
         return data.message || "Registration successful.";
     } catch (error) {
+        // Log the complete error to see if any additional information is available
         console.error("Registration error:", error);
+        throw error;
+    }
+};
+// Verify email using token
+export const verifyEmail = async (token) => {
+    try {
+        const response = await fetch(`${API_BASE_URL}/auth/verify-email/${token}`, {
+            method: "GET",
+        });
+
+        const data = await response.text(); // As it's just a simple text response
+        if (!response.ok) {
+            throw new Error(data || "Failed to verify email.");
+        }
+
+        return data || "Email verified successfully.";
+    } catch (error) {
+        console.error("Email verification error:", error);
         throw error;
     }
 };
