@@ -37,6 +37,7 @@ const Login = () => {
             login({
                user: data.data.user,
                token: data.data.token,
+               isPrivate: data.data.isPrivate,
             })
          );
 

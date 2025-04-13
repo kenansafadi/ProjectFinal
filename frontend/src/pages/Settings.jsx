@@ -15,7 +15,10 @@ const SettingsPage = ({}) => {
    const [userData, setUserData] = useState({
       name: user?.username || '',
       password: '',
+      isPrivate: user?.isPrivate || false,
    });
+
+   console.log(userData);
    const [success, setSuccess] = useState('');
    const dispatch = useDispatch();
 
@@ -29,7 +32,7 @@ const SettingsPage = ({}) => {
             return;
          }
 
-         dispatch(updateUser({ username: data?.data?.name }));
+         dispatch(updateUser({ username: data?.data?.name, isPrivate: data?.data?.isPrivate }));
 
          setSuccess(data.message);
       } catch (err) {
@@ -45,13 +48,17 @@ const SettingsPage = ({}) => {
    };
 
    const handleChange = (e) => {
-      setUserData({ ...userData, [e.target.name]: e.target.value });
+      if (e.target.name === 'isPrivate') {
+         setUserData({ ...userData, [e.target.name]: e.target.checked });
+      } else {
+         setUserData({ ...userData, [e.target.name]: e.target.value });
+      }
    };
 
    return (
       <MainLayout>
          <div className='flex items-center justify-center w-full h-full '>
-            <div className='max-w-md mx-auto mt-10 p-6 bg-white rounded-lg shadow-md'>
+            <div className='max-w-md mx-auto mt-10 p-6 bg-white rounded-lg shadow-md '>
                <h2 className='text-xl font-semibold mb-4'>Account Settings</h2>
                {error && <p className='text-red-500 mb-4 bg-red-100 p-2 rounded-md'>{error}</p>}
                {success && (
@@ -66,6 +73,16 @@ const SettingsPage = ({}) => {
                   name='name'
                />
 
+               <div className='flex items-center w-[max-content] gap-2 mb-4'>
+                  <label className='block text-sm font-medium'>Account Public</label>
+                  <input
+                     type='checkbox'
+                     className='w-full block border p-2  rounded-md '
+                     checked={userData.isPrivate}
+                     onChange={handleChange}
+                     name='isPrivate'
+                  />
+               </div>
                <label className='block mb-2 text-sm font-medium'>New Password</label>
                <input
                   type='password'

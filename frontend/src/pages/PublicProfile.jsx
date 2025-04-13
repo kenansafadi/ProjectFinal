@@ -150,14 +150,16 @@ const UserProfile = ({}) => {
                   <p className='text-sm font-medium text-gray-900'>{followers?.length}</p>
                   <p className='text-sm font-medium text-gray-900'>Followers</p>
                </div>
-               <div className='flex items-center justify-center gap-2 '>
-                  <p
-                     onClick={() => navigate(`/messages?user_id=${userProfile?._id}`)}
-                     className='text-sm font-medium text-blue-500 hover:underline cursor-pointer'
-                  >
-                     Message
-                  </p>
-               </div>
+               {!userProfile?.isPrivate && (
+                  <div className='flex items-center justify-center gap-2 '>
+                     <p
+                        onClick={() => navigate(`/messages?user_id=${userProfile?._id}`)}
+                        className='text-sm font-medium text-blue-500 hover:underline cursor-pointer'
+                     >
+                        Message
+                     </p>
+                  </div>
+               )}
             </div>
          </div>
       </div>

@@ -5,6 +5,7 @@ const initialState = {
    user: null,
    token: null,
    isAuthenticated: false,
+   isPrivate: false,
 };
 
 export const authSlice = createSlice({
@@ -16,6 +17,7 @@ export const authSlice = createSlice({
          state.user = action.payload.user;
          state.token = action.payload.token;
          state.isAuthenticated = true;
+         state.isPrivate = action.payload.isPrivate;
       },
       logout: (state) => {
          state.isLoggedIn = false;
@@ -29,6 +31,9 @@ export const authSlice = createSlice({
          }
          if (action.payload.email) {
             state.user.email = action.payload.email;
+         }
+         if (action.payload.isPrivate) {
+            state.user.isPrivate = action.payload.isPrivate;
          }
       },
    },
