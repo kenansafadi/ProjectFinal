@@ -17,6 +17,7 @@ import ForgotPassword from './pages/forgotPassword';
 import ResetPassword from './pages/resetPassword';
 import Notification from './pages/Notifications';
 
+// main app
 const App = () => {
    const { user, isAuthenticated } = useAuth();
 
