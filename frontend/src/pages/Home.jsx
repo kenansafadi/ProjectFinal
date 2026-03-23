@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import { XCircleIcon } from 'lucide-react';
-import useAuth from '../hooks/useAuth';
+import useAuth from '../hooks/useReduxAuth';
 import MainLayout from '../components/Layout';
 import PostCreateModal from '../components/PostModal';
 import { get } from '../utils/request';
@@ -26,8 +26,9 @@ const PostPage = ({ currentUser }) => {
    const fetchPosts = async () => {
       try {
          const res = await get(`${BACKEND_API_URL}/posts`);
-         const data = await res.json();
-         setPosts(data);
+       const data = await res.json();
+       setPosts(Array.isArray(data) ? data : []);
+
       } catch (error) {
          console.error('Error fetching posts:', error);
       }

@@ -1,15 +1,4 @@
-// src/services/postServices.js
 import API_BASE_URL from "../utils/api";
-import { getToken } from "../utils/jwtHelper";
-
-// Helper function to attach headers with token
-const authHeaders = () => {
-    const token = getToken();
-    return {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-    };
-};
 
 // ✅ Public route
 export const fetchPosts = async (page = 1, limit = 10) => {
@@ -24,12 +13,13 @@ export const fetchPosts = async (page = 1, limit = 10) => {
     return response.json();
 };
 
-// ✅ Protected route
-export const likePost = async (postId) => {
+// ✅ Protected routes — token passed as parameter
+export const likePost = async (postId, token) => {
     const response = await fetch(`${API_BASE_URL}/posts/${postId}/like`, {
         method: "PUT",
         headers: {
-            Authorization: `Bearer ${getToken()}`,
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
         },
     });
 
@@ -40,12 +30,12 @@ export const likePost = async (postId) => {
     return response.json();
 };
 
-// ✅ Protected route
-export const sharePost = async (postId) => {
+export const sharePost = async (postId, token) => {
     const response = await fetch(`${API_BASE_URL}/posts/${postId}/share`, {
         method: "POST",
         headers: {
-            Authorization: `Bearer ${getToken()}`,
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
         },
     });
 
@@ -56,11 +46,13 @@ export const sharePost = async (postId) => {
     return response.json();
 };
 
-// ✅ Protected route
-export const addComment = async (postId, commentText) => {
+export const addComment = async (postId, commentText, token) => {
     const response = await fetch(`${API_BASE_URL}/posts/${postId}/comment`, {
         method: "POST",
-        headers: authHeaders(),
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({ text: commentText }),
     });
 

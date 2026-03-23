@@ -2,11 +2,10 @@ import React from "react";
 import { Bell } from "lucide-react";
 import useNotifications from "../hooks/useNotifications";
 const NotificationBell = () => {
-    const { notifications } = useNotifications();
-    const unreadCount = notifications.filter(n => !n.read).length;
+    const { unreadCount } = useNotifications();
 
     return (
-        <div className="notification-bell">
+        <div className="notification-bell cursor-pointer">
             <Bell />
             {unreadCount > 0 && <span className="badge">{unreadCount}</span>}
         </div>

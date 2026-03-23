@@ -3,6 +3,7 @@
 const mongoose = require('mongoose');
 const Joi = require('joi');
 
+
 // הגדרת הסכימה עבור Auth
 const authSchema = new mongoose.Schema({
     email: { type: String, required: true, unique: true },

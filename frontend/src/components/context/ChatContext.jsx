@@ -1,47 +1,54 @@
-// context/ChatContext.js
 import { createContext, useEffect, useState } from "react";
-import { getUserIdFromToken } from "../../utils/jwtHelper"; // Import your helper
-
-import ChatService from "../../services/chatServices"; // Default import
+import toast from "react-hot-toast";
+import useReduxAuth from "../../hooks/useReduxAuth"; // ✅ get token from Redux
+import ChatService from "../../services/chatServices";
 
 const ChatContext = createContext();
 
 export const ChatProvider = ({ children }) => {
     const [messages, setMessages] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);  // Error state
+    const [error, setError] = useState(null);
+
+    const { token } = useReduxAuth(); // ✅ get token from Redux
 
     useEffect(() => {
-        const loadMessages = async () => {
-            try {
-                const userId = getUserIdFromToken(); // ✅ Get it dynamically
-                if (!userId) throw new Error("User not logged in.");
+        if (!token) {
+            setLoading(false);
+            return;
+        }
 
-                const messagesData = await ChatService.fetchChatMessages(userId); // Use ChatService
-                setMessages(messagesData);
+        // Connect to the chat service using token
+        ChatService.connect(token, () => {
+            setLoading(false);
+        });
 
-                await ChatService.markMessagesAsSeen(userId); // Use ChatService
-            } catch (error) {
-                setError(error.message);  // Set the error message
-                console.error("Failed to fetch messages:", error);
-            } finally {
-                setLoading(false);
-            }
+        ChatService.receiveMessage((message) => {
+            setMessages((prev) => [...prev, message]);
+        });
+
+        ChatService.errorHandle((err) => {
+            console.error("Socket connection error:", err);
+            setError("Failed to connect to chat.");
+            setLoading(false);
+        });
+
+        return () => {
+            ChatService.disconnect();
         };
+    }, [token]); // ✅ reconnect if token changes
 
-        loadMessages();
-    }, []);
-
-    const sendMessage = async (chatId, msg) => {
-        if (msg.trim()) {
-            try {
-                const messageData = { msg };
-                await ChatService.sendMessage(chatId, messageData); // Use ChatService
-                setMessages((prev) => [...prev, { msg }]);
-            } catch (error) {
-                setError("Failed to send message");
-                console.error("Failed to send message:", error);
-            }
+    const sendMessage = (messageData) => {
+        if (!messageData.receiverId) {
+            toast.error("Please select a user to send your message to.");
+            return;
+        }
+        try {
+            ChatService.sendMessage(messageData, token); // ✅ pass token
+            setMessages((prev) => [...prev, messageData]);
+        } catch (err) {
+            setError("Failed to send message");
+            console.error("Failed to send message:", err);
         }
     };
 

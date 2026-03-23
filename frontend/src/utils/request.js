@@ -22,13 +22,16 @@ export const put = async (url, data) => {
    });
 };
 
-export const get = async (url) => {
-   const token = store.getState().auth.token;
-   return await fetch(url, {
-      method: 'GET',
-      headers: {
-         'Content-Type': 'application/json',
-         Authorization: `Bearer ${token}`,
-      },
-   });
+
+// utils/request.js
+export const get = (url, token) => {
+  return fetch(url, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token && { Authorization: `Bearer ${token}` }), // <-- token here
+    },
+    credentials: 'include', 
+  });
 };
+

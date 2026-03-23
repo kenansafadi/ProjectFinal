@@ -1,5 +1,4 @@
 import API_BASE_URL from "../utils/api";
-import { getToken, setToken } from "../utils/jwtHelper"; // Importing token helper functions
 
 export const loginUser = async (email, password) => {
     try {
@@ -14,23 +13,13 @@ export const loginUser = async (email, password) => {
         }
 
         const data = await response.json();
-
-        // Save the token in cookies
-        if (data.token) {
-            setToken(data.token); // Save token if login is successful
-
-            console.log("Token:", data.token);
-
-        }
-
-        return data; // Return user data
+        return data;
     } catch (error) {
         console.error("Login failed:", error);
         throw error;
     }
 };
 
-// Forgot password request
 export const forgotPassword = async (email) => {
     try {
         const response = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
@@ -51,13 +40,12 @@ export const forgotPassword = async (email) => {
     }
 };
 
-// Reset password request
-export const resetPassword = async (token, newPassword) => {
+export const resetPassword = async (verificationCode, newPassword) => {
     try {
-        const response = await fetch(`${API_BASE_URL}/api/auth/reset-password/${token}`, {
+        const response = await fetch(`${API_BASE_URL}/auth/reset-password`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ newPassword }), // no token in body anymore
+            body: JSON.stringify({ verificationCode, password: newPassword }),
         });
 
         const data = await response.json();
@@ -72,44 +60,36 @@ export const resetPassword = async (token, newPassword) => {
     }
 };
 
-// Register new user
 export const registerUser = async (userData) => {
     try {
-        const token = getToken(); // Retrieve token from cookies if present
         const response = await fetch(`${API_BASE_URL}/auth/register`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": token ? `Bearer ${token}` : "", // Send token if it exists
             },
             body: JSON.stringify(userData),
         });
 
-        const data = await response.json(); // Parse the response as JSON
+        const data = await response.json();
 
         if (!response.ok) {
-            // Log the server response in case of error
-            console.error("Registration failed. Server response:", data);
             throw new Error(data.message || "Registration failed.");
         }
 
-        console.log("Token:", data.token);  // Now that data is available, you can safely log it
-
         return data.message || "Registration successful.";
     } catch (error) {
-        // Log the complete error to see if any additional information is available
         console.error("Registration error:", error);
         throw error;
     }
 };
-// Verify email using token
+
 export const verifyEmail = async (token) => {
     try {
         const response = await fetch(`${API_BASE_URL}/auth/verify-email/${token}`, {
             method: "GET",
         });
 
-        const data = await response.text(); // As it's just a simple text response
+        const data = await response.text();
         if (!response.ok) {
             throw new Error(data || "Failed to verify email.");
         }

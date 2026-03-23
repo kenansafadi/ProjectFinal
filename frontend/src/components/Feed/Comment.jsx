@@ -21,7 +21,7 @@ const Comment = ({ postId }) => {
             const response = await addComment(postId, newComment);
             setPosts((prevPosts) =>
                 prevPosts.map((post) =>
-                    post.id === postId
+                    (post.id === postId || post._id === postId)
                         ? { ...post, comments: [...post.comments, response.comment] }
                         : post
                 )
@@ -39,7 +39,7 @@ const Comment = ({ postId }) => {
             <h4>Comments</h4>
             <div className="comments-list">
                 {posts
-                    .find((post) => post.id === postId)
+                    .find((post) => post.id === postId || post._id === postId)
                     ?.comments.map((comment) => (
                         <div key={comment.id} className="comment">
                             <p>{comment.author}: {comment.text}</p>

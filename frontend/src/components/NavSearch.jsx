@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { get } from '../utils/request';
+import useAuth from '../hooks/useReduxAuth'
 
 const BACKEND_API_URL = import.meta.env.VITE_BACKEND_API_URL;
 
@@ -8,12 +9,15 @@ const SearchDropdown = () => {
    const [query, setQuery] = useState('');
    const [filteredUsers, setFilteredUsers] = useState([]);
    const [users, setUsers] = useState([]);
+   const { token } = useAuth();
 
    const handleFetchUsers = async () => {
+        if (!token) return; // don't fetch if not logged in
+
       try {
-         const response = await get(`${BACKEND_API_URL}/users/users`);
+         const response = await get(`${BACKEND_API_URL}/users`);
          const data = await response.json();
-         setUsers(data);
+         setUsers(Array.isArray(data) ? data : []);
       } catch (error) {
          setUsers([]);
       }
@@ -34,10 +38,10 @@ const SearchDropdown = () => {
       setFilteredUsers(filtered);
    };
 
-   useEffect(() => {
-      handleFetchUsers();
-   }, []);
-
+ useEffect(() => {
+  if (!token) return;
+  handleFetchUsers();
+}, [token]); // fetch only when token is ready
    return (
       <div className='flex items-center space-x-4 relative flex-1'>
          <input

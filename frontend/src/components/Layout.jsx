@@ -2,7 +2,7 @@
 import React from 'react';
 import Sidebar from './Sidebar';
 import Navbar from './Navbar';
-import useAuth from '../hooks/useAuth';
+import useAuth from '../hooks/useReduxAuth';
 
 const MainLayout = ({ children }) => {
    const { user } = useAuth();

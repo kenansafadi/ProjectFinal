@@ -3,22 +3,16 @@ import { Bell, Heart, MessageCircle, UserPlus } from 'lucide-react';
 import moment from 'moment';
 import { Link, useSearchParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
-import { get, post } from '../utils/request';
+import { get } from '../utils/request';
 import { useState, useEffect } from 'react';
+import useNotifications from '../components/hooks/useNotifications';
 
 const BACKEND_API_URL = import.meta.env.VITE_BACKEND_API_URL;
 
 const NotificationPage = () => {
    const [notification, setNotification] = useState({});
    const id = useSearchParams()[0]?.get('id');
-
-   const handleMarkAsRead = async () => {
-      try {
-         await post(`${BACKEND_API_URL}/notifications/mark-as-read`, {
-            notificationId: id,
-         });
-      } catch (error) {}
-   };
+   const { markAsRead } = useNotifications();
 
    useEffect(() => {
       const fetchNotifications = async () => {
@@ -35,9 +29,9 @@ const NotificationPage = () => {
 
       if (id) {
          fetchNotifications();
-         handleMarkAsRead();
+         markAsRead(id);
       }
-   }, [id]);
+   }, [id, markAsRead]);
 
    const renderIcon = (type) => {
       switch (type) {

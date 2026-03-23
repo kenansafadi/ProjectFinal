@@ -1,62 +1,62 @@
 import { useRef, useEffect } from 'react';
-import io from 'socket.io-client';
-import useAuth from '../hooks/useAuth';
+import { io } from 'socket.io-client';
+import useAuth from './useReduxAuth';
+import { isTokenExpired } from '../utils/jwtHelper';
 
 const useSocket = (callback) => {
-   const { user, token } = useAuth();
+  const socket = useRef(null);
+  const { token } = useAuth(); // get token from Redux
 
-   const socket = useRef(null);
+  useEffect(() => {
+    // Don't connect if no token or token expired
+    if (!token || isTokenExpired(token)) return;
 
-   useEffect(() => {
-      socket.current = io(import.meta.env.VITE_SOCKET_URL, {
-         auth: { token: user?.id },
-      });
+    // Initialize socket
+    socket.current = io(import.meta.env.VITE_SOCKET_URL, {
+      withCredentials: true,
+      transports: ['websocket'],
+      auth: { token }, // send JWT for server-side auth
+    });
 
-      socket.current.on('connect', () => {
-         console.log('Connected to socket server');
-         if (callback) {
-            callback();
-         }
-      });
+    // Connected successfully
+    socket.current.on('connect', () => {
+      console.log('Connected to socket server:', socket.current.id);
+      if (callback) callback();
+    });
 
-      socket.current.on('disconnect', () => {
-         console.log('Disconnected from socket server');
-      });
+    // Disconnected
+    socket.current.on('disconnect', (reason) => {
+      console.log('Disconnected from socket server:', reason);
+    });
 
-      socket.current.on('connect_error', (error) => {
-         console.log('Connection error:', error);
-      });
+    // Connection errors
+    socket.current.on('connect_error', (error) => {
+      console.error('Socket connection error:', error.message || error);
+    });
 
-      return () => {
-         socket.current.disconnect();
-      };
-   }, []);
+    // Cleanup on unmount
+    return () => {
+      if (socket.current) socket.current.disconnect();
+    };
+  }, [token]);
 
-   const errorHandle = (handler) => {
-      socket.current.on('connect_error', handler);
-   };
+  const errorHandle = (handler) => {
+    socket.current?.on('connect_error', handler);
+  };
 
-   const disconnect = () => {
-      if (socket.current) {
-         socket.current.disconnect();
-      }
-   };
+  const disconnect = () => {
+    socket.current?.disconnect();
+  };
 
-   const sendMessage = (channel, messageData) => {
-      socket.current.emit(channel, { ...messageData });
-   };
+  const sendMessage = (channel, messageData) => {
+    socket.current?.emit(channel, messageData);
+  };
 
-   const receiveMessage = (channel, handler) => {
-      socket.current.on(channel, handler);
-   };
+  const receiveMessage = (channel, handler) => {
+    socket.current?.on(channel, handler);
+  };
 
-   return {
-      socket,
-      errorHandle,
-      disconnect,
-      sendMessage,
-      receiveMessage,
-   };
+  return { socket, errorHandle, disconnect, sendMessage, receiveMessage };
 };
 
 export default useSocket;

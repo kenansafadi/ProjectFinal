@@ -82,16 +82,30 @@ router.post('/:id/like', authMiddleware, async (req, res) => {
 router.post('/:id/comment', authMiddleware, async (req, res) => {
    try {
       const { id } = req.params;
-      const { comment, author_name } = req.body;
-      console.log(req.body);
+      const { comment, text, author_name } = req.body;
+      const actualText = text || comment;
       const user = req.user;
       const post = await Post.findById(id);
       if (!post) {
          return res.status(400).json({ message: 'Post not found' });
       }
-      post.comments.push({ userId: user.id, text: comment, author_name, replies: [] });
+      
+      const newCommentName = author_name || user?.username || user?.name || "Author";
+      post.comments.push({ userId: user.id || user._id, text: actualText, author_name: newCommentName, replies: [] });
       await post.save();
-      res.json({ message: 'Comment added successfully' });
+      
+      const savedComment = post.comments[post.comments.length - 1];
+      
+      res.json({ 
+         message: 'Comment added successfully', 
+         comment: {
+            id: savedComment._id,
+            _id: savedComment._id,
+            author: savedComment.author_name,
+            author_name: savedComment.author_name,
+            text: savedComment.text
+         }
+      });
    } catch (error) {
       res.status(400).json({ message: 'Failed to add comment', status: 400 });
    }

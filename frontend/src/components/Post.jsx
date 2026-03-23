@@ -4,14 +4,14 @@ import { ThumbsDown, ThumbsUp, Trash2 } from 'lucide-react';
 import { XCircle } from 'lucide-react';
 import { post, get } from '../utils/request';
 import { useSelector } from 'react-redux';
-import useAuth from '../hooks/useAuth';
+import useAuth from '../hooks/useReduxAuth';
 import { useNavigate } from 'react-router-dom';
 const BACKEND_API_URL = import.meta.env.VITE_BACKEND_API_URL;
 
 const Post = ({ postData, handleLikePost, isLiked }) => {
    const [isCommentModalOpen, setIsCommentModalOpen] = useState(false);
    const [newComment, setNewComment] = useState('');
-   const [comments, setComments] = useState([]);
+   const [comments, setComments] = useState(postData?.comments || []);
    const [postToDelete, setPostToDelete] = useState(null);
    const [deleteModalOpen, setDeleteModalOpen] = useState(false);
    const [isReplying, setIsReplying] = useState(false);
@@ -102,16 +102,16 @@ const Post = ({ postData, handleLikePost, isLiked }) => {
                   onClick={() => setIsCommentModalOpen(true)}
                   className='text-blue-500 text-xs cursor-pointer'
                >
-                  {postData?.comments?.length} Comments
+                  {comments?.length || 0} Comments
                </span>
-               {postData?.comments?.length > 0 && (
+               {comments?.length > 0 && (
                   <span
                      onClick={() => setShowComments(!showComments)}
                      className='text-xs text-blue-500  cursor-pointer '
                   >
                      {showComments
-                        ? `Hide comments (${postData?.comments?.length})`
-                        : `Show comments (${postData?.comments?.length})`}
+                        ? `Hide comments (${comments?.length || 0})`
+                        : `Show comments (${comments?.length || 0})`}
                   </span>
                )}
             </div>

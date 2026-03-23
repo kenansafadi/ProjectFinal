@@ -1,10 +1,11 @@
 import { useEffect, useState, useRef } from 'react';
 import socketService from '../services/chatServices';
-import useAuth from '../hooks/useAuth';
+import useAuth from '../hooks/useReduxAuth';
 import MainLayout from '../components/Layout';
 import useSocket from '../hooks/useSocket';
 import { get } from '../utils/request';
 import { useSearchParams } from 'react-router-dom';
+import toast from 'react-hot-toast';
 const BACKEND_API_URL = import.meta.env.VITE_BACKEND_API_URL;
 
 export default function Messaging() {
@@ -40,14 +41,18 @@ export default function Messaging() {
 
    const handleFetchMessages = async () => {
       try {
-         if (selectedUserId && currentUser?.id) {
+         if (selectedUserId && (currentUser?.id || user?._id)) {
             const response = await get(
-               `${BACKEND_API_URL}/chat/messages?senderId=${currentUser?.id}&receiverId=${selectedUserId}`
+               `${BACKEND_API_URL}/chat/messages?senderId=${currentUser?.id || user?._id}&receiverId=${selectedUserId}`
             );
             const data = await response.json();
 
-            setMessages(data);
-            autoScroll();
+            if (Array.isArray(data)) {
+               setMessages(data);
+            } else {
+               setMessages([]);
+            }
+            setTimeout(() => autoScroll(), 100);
          }
       } catch (error) {
          console.log(error);
@@ -65,12 +70,14 @@ export default function Messaging() {
          }
 
          setUsers((prev) => {
-            const uniqueData = [...firstChatUser, ...data].filter(
+            const uniqueData = [...firstChatUser, ...(Array.isArray(data) ? data : [])].filter(
                (item, index, self) => index === self.findIndex((t) => t._id === item._id)
             );
 
             if (firstChatUser.length > 0) {
                setSelectedUserId(firstChatUser[0]?._id);
+            } else if (uniqueData.length > 0) {
+               setSelectedUserId(uniqueData[0]._id);
             }
 
             return uniqueData;
@@ -80,51 +87,27 @@ export default function Messaging() {
       }
    };
 
-   // useEffect(() => {
-   //    socketService.connect(`${currentUser?.id}`);
-   //    socketService.errorHandle((error) => {
-   //       const parsed_error = JSON.parse(error.message || '{}');
-   //       console.log(parsed_error);
-   //       setError(parsed_error?.message || '');
-   //       setTimeout(() => {
-   //          setError('');
-   //       }, 3000);
-   //    });
-
-   //    socketService.receiveMessage((msg) => {
-   //       setMessages((prev) => [...prev, msg]);
-   //       autoScroll();
-   //    });
-   //    handleFetchUser();
-
-   //    return () => {
-   //       socketService.disconnect();
-   //    };
-   // }, []);
-
    const handleFirstChatUser = async () => {
       try {
          const response = await get(
             `${BACKEND_API_URL}/chat/first-chat-user?user_id=${firstChatUserId}`
          );
          const data = await response.json();
-         if (data) {
+         if (data && !data.message) {
             return [data];
          } else {
             return [];
          }
-         // console.log('data', data);
-         // setSelectedUserId(data._id);
-         // setUsers((prev) => [...prev, data]);
       } catch (error) {
          console.log(error);
+         return [];
       }
    };
 
    useEffect(() => {
       receiveMessage('ReceiveMessage', (msg) => {
-         setMessages((prev) => [...prev, msg]);
-         autoScroll();
+         setMessages((prev) => (Array.isArray(prev) ? [...prev, msg] : [msg]));
+         setTimeout(() => autoScroll(), 100);
       });
 
       handleFetchUser();
@@ -137,41 +120,27 @@ export default function Messaging() {
       handleFetchMessages();
    }, [selectedUserId]);
 
-   // useEffect(() => {
-   //    if (firstChatUserId) {
-   //       handleFirstChatUser();
-   //    }
-   // }, [firstChatUserId]);
-
-   // const sendMessage = () => {
-   //    if (!newMsg.trim()) return;
-
-   //    const msgObj = {
-   //       receiverId: selectedUserId,
-   //       senderId: currentUser?.id,
-   //       text: newMsg,
-   //       sender_name: currentUser?.name,
-   //    };
-   //    // console.log(msgObj, currentUser?.id, selectedUserId);
-   //    socketService.sendMessage(msgObj);
-
-   //    // Optimistically update UI
-   //    setMessages((prev) => [...prev, msgObj]);
-
-   //    setNewMsg('');
-   // };
-
    const sendMessage = () => {
       if (!newMsg.trim()) return;
+      if (!selectedUserId) {
+         toast.error('Please select a user to send your message to.');
+         return;
+      }
       const msgObj = {
          receiverId: selectedUserId,
-         senderId: currentUser?.id,
+         senderId: currentUser?.id || user?._id,
          text: newMsg,
-         sender_name: currentUser?.name,
+         sender_name: currentUser?.name || user?.username || "Guest",
       };
-      sendSocketMessage('SendMessage', msgObj);
-      setMessages((prev) => [...prev, msgObj]);
-      setNewMsg('');
+      
+      try {
+         sendSocketMessage('SendMessage', msgObj);
+         setMessages((prev) => (Array.isArray(prev) ? [...prev, msgObj] : [msgObj]));
+         setNewMsg('');
+         setTimeout(() => autoScroll(), 100);
+      } catch (error) {
+         console.error('Error sending message:', error);
+      }
    };
 
    return (

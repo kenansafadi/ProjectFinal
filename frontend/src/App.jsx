@@ -1,64 +1,123 @@
-import React, { useEffect, useState } from "react";
+
+import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
-import { getToken, isTokenExpired, decodeToken } from "./utils/jwtHelper";
 import Login from "./components/Auth/login";
 import Register from "./components/Auth/register";
 import Home from "./pages/Home";
 import Profile from "./pages/Profile";
 import { Toaster } from "react-hot-toast";
-import Messages from './pages/Messages';
-import useAuth from './hooks/useAuth';
-import Welcome from './components/Auth/welcome';
-import VerifyEmail from './pages/verify';
-import SettingsPage from './pages/Settings';
-import MyPostsPage from './pages/MyPost';
-import PublicProfile from './pages/PublicProfile';
-import ForgotPassword from './pages/forgotPassword';
-import ResetPassword from './pages/resetPassword';
-import Notification from './pages/Notifications';
+import Messages from "./pages/Messages";
+import useAuth from "./hooks/useReduxAuth";
+import Welcome from "./components/Auth/welcome";
+import VerifyEmail from "./pages/verify";
+import SettingsPage from "./pages/Settings";
+import MyPostsPage from "./pages/MyPost";
+import PublicProfile from "./pages/PublicProfile";
+import ForgotPassword from "./pages/forgotPassword";
+import ResetPassword from "./pages/resetPassword";
+import Notification from "./pages/Notifications";
+
+// 🔐 Protect routes (only for logged-in users)
+const ProtectedRoute = ({ children }) => {
+  const { isAuthenticated } = useAuth();
+  return isAuthenticated ? children : <Navigate to="/login" replace />;
+};
+
+// 🚫 Prevent logged-in users from accessing auth pages
+const GuestRoute = ({ children }) => {
+  const { isAuthenticated } = useAuth();
+  return !isAuthenticated ? children : <Navigate to="/" replace />;
+};
 
 // main app
 const App = () => {
-   const { user, isAuthenticated } = useAuth();
+  const { user } = useAuth();
 
-   return (
-      <>
-         <Toaster position='top-right' />
+  return (
+    <>
+      <Toaster position="top-right" />
 
-         <Routes>
-            <Route
-               path='/messages'
-               element={isAuthenticated ? <Messages /> : <Navigate to='/login' />}
-            />
-            <Route path='/' element={isAuthenticated ? <Home /> : <Navigate to='/login' />} />
-            <Route path='/login' element={<Login />} />
+      <Routes>
+        {/* 🔓 Public routes */}
+        <Route path="/public-profile/:id" element={<PublicProfile />} />
+        <Route path="/verify-account" element={<VerifyEmail />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/welcome" element={<Welcome />} />
 
-            <Route
-               path='/register'
-               element={isAuthenticated ? <Navigate to='/' /> : <Register />}
-            />
-            <Route path='/forgot-password' element={<ForgotPassword />} />
-            <Route path='/reset-password' element={<ResetPassword />} />
-            <Route path='/verify-account' element={<VerifyEmail />} />
-            <Route path='/notification' element={<Notification />} />
-            <Route path='/welcome' element={<Welcome />} />
-            <Route
-               path='/profile'
-               element={!isAuthenticated ? <Navigate to='/login' /> : <Profile user={user} />}
-            />
-            <Route
-               path='/settings'
-               element={!isAuthenticated ? <Navigate to='/login' /> : <SettingsPage />}
-            />
-            <Route
-               path='/my-posts'
-               element={!isAuthenticated ? <Navigate to='/login' /> : <MyPostsPage />}
-            />
-            <Route path='/public-profile/:id' element={<PublicProfile />} />
-            <Route path='*' element={<Navigate to='/' />} />
-         </Routes>
-      </>
-   );
+        {/* 🚫 Guest-only routes */}
+        <Route
+          path="/login"
+          element={
+            <GuestRoute>
+              <Login />
+            </GuestRoute>
+          }
+        />
+        <Route
+          path="/register"
+          element={
+            <GuestRoute>
+              <Register />
+            </GuestRoute>
+          }
+        />
+
+        {/* 🔐 Protected routes */}
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute>
+              <Home />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/messages"
+          element={
+            <ProtectedRoute>
+              <Messages />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/notifications"
+          element={
+            <ProtectedRoute>
+              <Notification />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <Profile user={user} />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute>
+              <SettingsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/my-posts"
+          element={
+            <ProtectedRoute>
+              <MyPostsPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* 🔁 Fallback */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </>
+  );
 };
 
 export default App;

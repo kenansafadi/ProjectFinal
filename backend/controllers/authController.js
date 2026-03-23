@@ -2,13 +2,12 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { Auth } = require('../model/authModel');
 const { User } = require('../model/usersModel');
-const { Registry } = require('../model/registryModel');
 const { hashPassword, verifyPassword, generateToken } = require('../utils/index');
 const {
-   sendResetEmail,
    sendEmail,
    verification_template,
    registration_template,
+   resetPassword_template,
 } = require('../utils/emailService');
 
 const registerUser = async (userData) => {
@@ -148,7 +147,11 @@ const forgotPassword = async (email) => {
    const resetLink = `${process.env.CLIENT_URL}/reset-password/${token}`;
 
    // Send reset email
-   await sendResetEmail({ user: process.env.EMAIL_USER }, email, resetLink);
+   await sendEmail(
+      email,
+      'Password Reset Request',
+      resetPassword_template(user.username, resetLink)
+   );
 
    return 'Password reset link sent to your email.';
 };

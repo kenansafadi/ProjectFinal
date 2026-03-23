@@ -1,8 +1,14 @@
 import { io } from "socket.io-client";
-import API_BASE_URL from "./api";
-const socket = io(API_BASE_URL.replace('http', 'ws'), {
+
+const token = localStorage.getItem('TOKEN_KEY'); // your JWT
+
+const socket = io(import.meta.env.VITE_SOCKET_URL, {
     withCredentials: true,
-    transports: ['websocket'],  // Optionally force WebSocket
+    transports: ['websocket'],
+    autoConnect: false,
+    auth: {
+        token // send JWT to backend for auth
+    }
 });
 
 export default socket;

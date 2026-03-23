@@ -1,10 +1,7 @@
 import API_BASE_URL from "../utils/api";
-import { getToken } from "../utils/jwtHelper";
 
-// GET the current authenticated user's profile
-export const fetchCurrentUserProfile = async () => {
-    const token = getToken();
-
+// ✅ pass token as argument
+export const fetchCurrentUserProfile = async (token) => {
     const response = await fetch(`${API_BASE_URL}/users/me`, {
         method: "GET",
         headers: {
@@ -20,7 +17,6 @@ export const fetchCurrentUserProfile = async () => {
     return response.json();
 };
 
-// GET another user's profile by ID
 export const fetchUserProfileById = async (userId) => {
     const response = await fetch(`${API_BASE_URL}/users/${userId}`, {
         method: "GET",
@@ -33,10 +29,7 @@ export const fetchUserProfileById = async (userId) => {
     return response.json();
 };
 
-// POST to follow/unfollow a user
-export const followUser = async (userId) => {
-    const token = getToken();
-
+export const followUser = async (userId, token) => {
     const response = await fetch(`${API_BASE_URL}/users/follow`, {
         method: "POST",
         headers: {
@@ -53,9 +46,8 @@ export const followUser = async (userId) => {
 
     return response.json();
 };
-export const unfollowUser = async (userId) => {
-    const token = getToken();
 
+export const unfollowUser = async (userId, token) => {
     const response = await fetch(`${API_BASE_URL}/users/unfollow/${userId}`, {
         method: "POST",
         headers: {
@@ -72,10 +64,7 @@ export const unfollowUser = async (userId) => {
     return response.json();
 };
 
-// PUT to update the user's profile
-export const updateUserProfile = async (updatedData) => {
-    const token = getToken();
-
+export const updateUserProfile = async (updatedData, token) => {
     const response = await fetch(`${API_BASE_URL}/users/me`, {
         method: "PUT",
         headers: {
@@ -93,10 +82,7 @@ export const updateUserProfile = async (updatedData) => {
     return response.json();
 };
 
-// PATCH to update the user's business status
-export const updateBusinessStatus = async (isBusiness) => {
-    const token = getToken();
-
+export const updateBusinessStatus = async (isBusiness, token) => {
     const response = await fetch(`${API_BASE_URL}/users/me/business-status`, {
         method: "PATCH",
         headers: {
@@ -114,10 +100,7 @@ export const updateBusinessStatus = async (isBusiness) => {
     return response.json();
 };
 
-// DELETE a user (Admin only)
-export const deleteUser = async (userId) => {
-    const token = getToken();
-
+export const deleteUser = async (userId, token) => {
     const response = await fetch(`${API_BASE_URL}/users/${userId}`, {
         method: "DELETE",
         headers: {

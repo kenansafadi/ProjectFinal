@@ -16,7 +16,8 @@ const MyPostsPage = () => {
       try {
          const res = await get(`${BACKEND_API_URL}/posts/mine`);
          const data = await res.json();
-         setPosts(data);
+         setPosts(Array.isArray(data) ? data : []);
+
       } catch (error) {
          console.error('Error fetching posts:', error);
       }

@@ -1,11 +1,10 @@
 // SettingsPage.jsx
 import { useState } from 'react';
-import useAuth from '../hooks/useAuth';
+import useAuth from '../hooks/useReduxAuth';
 import MainLayout from '../components/Layout';
 import { useDispatch } from 'react-redux';
-import { updateUser } from '../store/reducers/auth';
 import { put } from '../utils/request';
-
+import updateUser from '../store/reducers/auth';
 const BACKEND_API_URL = import.meta.env.VITE_BACKEND_API_URL;
 
 const SettingsPage = ({}) => {

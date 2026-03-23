@@ -6,6 +6,7 @@ const cors = require('cors');
 const morgan = require('morgan');
 const http = require('http');
 const { Server } = require('socket.io');
+const { verifyToken } = require('./utils');
 const Message = require('./model/MessageModel');
 const Notification = require('./model/Notification');
 
@@ -24,20 +25,34 @@ io.use((socket, next) => {
    const token = socket.handshake.auth.token;
 
    if (token) {
-      // const decoded = verifyToken(token);
-      // socket.userId = decoded.id;
-
-      socket.join(token);
-
-      return next();
+      try {
+         const decoded = verifyToken(token);
+         socket.userId = decoded.id;
+         socket.join(decoded.id);
+         return next();
+      } catch (error) {
+         return next(new Error(JSON.stringify({ message: 'Unauthorized' })));
+      }
    }
 
    return next(new Error(JSON.stringify({ message: 'Unauthorized' })));
 });
 
 io.on('connection', (socket) => {
+   socket.on('register', (userId) => {
+      if (userId) socket.join(userId);
+   });
+
    socket.on('SendMessage', async ({ senderId, receiverId, text, sender_name }) => {
+      if (!senderId || !receiverId) return;
+      
       io.to(receiverId).emit('ReceiveMessage', {
+         senderId,
+         receiverId,
+         text,
+         isRead: false,
+      });
+      socket.to(senderId).emit('ReceiveMessage', {
          senderId,
          receiverId,
          text,
@@ -49,6 +64,8 @@ io.on('connection', (socket) => {
          sender_name,
          read: false,
          text,
+         senderId,
+         type: 'message',
       });
 
       const message = new Message({ senderId, receiverId, text, isRead: false, sender_name });
@@ -59,6 +76,8 @@ io.on('connection', (socket) => {
          sender_name,
          read: false,
          text,
+         senderId,
+         type: 'message',
       });
       await notification.save();
    });
@@ -70,12 +89,12 @@ io.on('connection', (socket) => {
 
 // Middlewares
 app.use(morgan('dev'));
-
 app.use(
    cors({
       origin: process.env.FRONTEND_API_URL,
       methods: ['GET', 'POST', 'PUT', 'DELETE'],
       optionsSuccessStatus: 204,
+      credentials: true,
    })
 );
 

@@ -3,7 +3,7 @@ import { Heart, HeartOff } from 'lucide-react'; // Follow/Unfollow Icons
 import { ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { post, get } from '../utils/request';
-import useAuth from '../hooks/useAuth';
+import useAuth from '../hooks/useReduxAuth';
 import MainLayout from '../components/Layout';
 import { useParams } from 'react-router-dom';
 const BACKEND_API_URL = import.meta.env.VITE_BACKEND_API_URL;

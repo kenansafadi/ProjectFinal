@@ -58,7 +58,7 @@ export const PostProvider = ({ children }) => {
             // Update the post with the new comment
             setPosts((prevPosts) =>
                 prevPosts.map((post) =>
-                    post.id === postId
+                    (post.id === postId || post._id === postId)
                         ? { ...post, comments: [...post.comments, response.comment] } // Add the new comment to the post
                         : post
                 )

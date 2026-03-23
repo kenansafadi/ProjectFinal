@@ -6,7 +6,8 @@ const Notification = require('../model/Notification');
 
 const router = express.Router();
 
-router.get('/users', authMiddleware, async (req, res) => {
+
+router.get('/', authMiddleware, async (req, res) => {
    try {
       const users = await User.find({}, '_id username');
       res.json(users || []);
