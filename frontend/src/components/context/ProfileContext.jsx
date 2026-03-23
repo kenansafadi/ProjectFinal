@@ -1,4 +1,6 @@
 import { createContext, useState } from "react";
+import { store } from '../../store/store';
+
 import {
     fetchCurrentUserProfile,
     fetchUserProfileById,
@@ -17,9 +19,11 @@ export const ProfileProvider = ({ children }) => {
     const loadProfile = async (userId = null) => {
         try {
             setLoading(true);
+            const token = store.getState().auth.token; 
+             console.log('profile token:', token);
             const data = userId
                 ? await fetchUserProfileById(userId)
-                : await fetchCurrentUserProfile();
+                : await fetchCurrentUserProfile(token);
             setProfile(data);
         } catch (err) {
             console.error("Failed to load profile", err);

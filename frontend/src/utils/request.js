@@ -25,6 +25,7 @@ export const put = async (url, data) => {
 
 // utils/request.js
 export const get = (url, token) => {
+  /* console.log("Token: ", store.getState().auth.token)
   return fetch(url, {
     method: 'GET',
     headers: {
@@ -32,6 +33,24 @@ export const get = (url, token) => {
       ...(token && { Authorization: `Bearer ${token}` }), // <-- token here
     },
     credentials: 'include', 
+  });*/
+  let authHeader = {};
+  const storeToken = store.getState().auth.token;
+  console.log('token from store:', storeToken); 
+  
+  if (token) {
+    authHeader = { Authorization: `Bearer ${token}` };
+  } else if (storeToken) {
+    authHeader = { Authorization: `Bearer ${storeToken}` };
+  }
+
+  return fetch(url, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      ...authHeader,
+    },
+    credentials: 'include',
   });
 };
 

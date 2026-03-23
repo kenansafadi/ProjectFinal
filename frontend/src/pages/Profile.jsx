@@ -18,7 +18,7 @@ const UserProfile = ({}) => {
    const [isAccepted, setIsAccepted] = useState(false);
    const [followers, setFollowers] = useState([]);
    const { user } = useAuth();
-   const { id } = useParams();
+   //const { id } = useParams();
 
    const handleUnfollow = async () => {
       try {
@@ -70,7 +70,7 @@ const UserProfile = ({}) => {
    };
 
    const handleFetchUserProfile = async () => {
-      try {
+      /*try {
          const response = await get(`${BACKEND_API_URL}/users/${id}`);
          const data = await response.json();
          setFollowers(data?.followers?.filter((follower) => follower.isAccepted));
@@ -80,7 +80,14 @@ const UserProfile = ({}) => {
          );
 
          setUserProfile(data);
-      } catch (error) {}
+      } catch (error) {}*/
+       try {
+                console.log('user object:', user)
+             const response = await get(`${BACKEND_API_URL}/users/${user.id}`);
+             const data = await response.json();
+             setFollowers(data?.followers?.filter((follower) => follower.isAccepted));
+             setUserProfile(data);
+          } catch (error) {}
    };
 
    useEffect(() => {
