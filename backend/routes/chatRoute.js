@@ -124,4 +124,41 @@ router.delete('/messages/:id', authMiddleware, async (req, res) => {
    }
 });
 
+router.post('/messages/:id/react', authMiddleware, async (req, res) => {
+   try {
+      const { id } = req.params;
+      const { emoji } = req.body;
+      const user = req.user;
+      
+      const allowedEmojis = ['👍', '❤️', '😂', '😮', '😢'];
+      if (!allowedEmojis.includes(emoji)) {
+         return res.status(400).json({ message: 'Invalid emoji reaction' });
+      }
+
+      const message = await Message.findById(id);
+      if (!message) return res.status(404).json({ message: 'Message not found' });
+
+      if (!message.reactions) message.reactions = [];
+
+      const existingReactionIndex = message.reactions.findIndex(
+         (r) => String(r.userId) === String(user.id)
+      );
+
+      if (existingReactionIndex !== -1) {
+         if (message.reactions[existingReactionIndex].emoji === emoji) {
+            message.reactions.splice(existingReactionIndex, 1);
+         } else {
+            message.reactions[existingReactionIndex].emoji = emoji;
+         }
+      } else {
+         message.reactions.push({ userId: user.id, emoji });
+      }
+
+      await message.save();
+      res.json({ message: 'Reaction toggled', reactions: message.reactions });
+   } catch (error) {
+      res.status(500).json({ message: 'Failed to react to message', status: 500 });
+   }
+});
+
 module.exports = router;

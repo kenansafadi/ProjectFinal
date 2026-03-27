@@ -122,71 +122,130 @@ const QuoteBlock = ({ replyTo, isMine, onClick }) => (
    </div>
 );
 
-const MessageBubble = ({ msg, isMine, onQuoteClick }) => {
+const MessageReactions = ({ reactions, isMine, onReact }) => {
+   if (!reactions?.length) return null;
+   const emojiCounts = {};
+   reactions.forEach(r => { emojiCounts[r.emoji] = (emojiCounts[r.emoji] || 0) + 1; });
+   
+   return (
+      <div className={`flex gap-1 mt-1 flex-wrap ${isMine ? 'justify-end' : 'justify-start'}`}>
+         {Object.entries(emojiCounts).map(([emoji, count]) => (
+            <button
+               key={emoji}
+               onClick={() => onReact?.(emoji)}
+               className={`text-xs px-1.5 py-0.5 rounded-full border transition-colors ${
+                  isMine 
+                     ? 'bg-blue-600 border-blue-400 text-white hover:bg-blue-700' 
+                     : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
+               }`}
+            >
+               {emoji} {count > 1 && count}
+            </button>
+         ))}
+      </div>
+   );
+};
+
+const EmojiPicker = ({ onSelect, onClose }) => {
+   const emojis = ['👍', '❤️', '😂', '😮', '😢'];
+   return (
+      <div className='fixed inset-0 z-[200]' onClick={onClose}>
+         <div className='absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-white rounded-xl shadow-xl border border-gray-100 p-2 flex gap-1' onClick={e => e.stopPropagation()}>
+            {emojis.map(emoji => (
+               <button
+                  key={emoji}
+                  onClick={() => onSelect(emoji)}
+                  className='text-xl p-1.5 hover:bg-gray-100 rounded-lg transition-colors'
+               >
+                  {emoji}
+               </button>
+            ))}
+         </div>
+      </div>
+   );
+};
+
+const MessageBubble = ({ msg, isMine, onQuoteClick, onReact }) => {
    const msgType = msg.type || (msg.image ? 'image' : 'text');
    const hasQuote = msg.replyTo?.senderName;
    const hasText = msg.text && msgType !== 'post_link';
+   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
    return (
-      <div className={`max-w-xs w-fit rounded-2xl ${
-         isMine ? 'bg-blue-500 text-white rounded-br-md' : 'bg-gray-100 text-gray-800 rounded-bl-md'
-      } ${
-         msgType === 'image' && !hasText && !hasQuote ? 'p-1'
-         : msgType === 'post_link' ? 'p-0 overflow-hidden'
-         : 'px-4 py-2.5'
-      }`}>
+      <div className='relative group'>
+         <div className={`max-w-xs w-fit rounded-2xl ${
+            isMine ? 'bg-blue-500 text-white rounded-br-md' : 'bg-gray-100 text-gray-800 rounded-bl-md'
+         } ${
+            msgType === 'image' && !hasText && !hasQuote ? 'p-1'
+            : msgType === 'post_link' ? 'p-0 overflow-hidden'
+            : 'px-4 py-2.5'
+         }`}>
 
-         {msg.forwarded && msgType !== 'post_link' && (
-            <div className={`text-[11px] flex items-center gap-1 mb-1 ${isMine ? 'text-blue-100' : 'text-gray-400'}`}>
-               <CornerUpRight className='w-3 h-3' />
-               Forwarded{msg.originalSenderName ? ` from ${msg.originalSenderName}` : ''}
-            </div>
-         )}
-
-         {hasQuote && (
-            <QuoteBlock replyTo={msg.replyTo} isMine={isMine} onClick={onQuoteClick} />
-         )}
-
-         {msgType === 'post_link' && msg.postLink && (
-            <PostLinkCard postLink={msg.postLink} isMine={isMine} />
-         )}
-
-         {msgType === 'image' && msg.image && (
-            <img src={`${BASE_URL}${msg.image}`} alt='Shared' className='max-w-[240px] max-h-[200px] rounded-xl object-cover cursor-pointer' onClick={() => window.open(`${BASE_URL}${msg.image}`, '_blank')} />
-         )}
-
-         {msgType === 'file' && (
-            <div className='flex items-center gap-3 max-w-[220px]'>
-               <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${isMine ? 'bg-blue-400' : 'bg-gray-200'}`}>
-                  <FileText className='w-5 h-5' />
+            {msg.forwarded && msgType !== 'post_link' && (
+               <div className={`text-[11px] flex items-center gap-1 mb-1 ${isMine ? 'text-blue-100' : 'text-gray-400'}`}>
+                  <CornerUpRight className='w-3 h-3' />
+                  Forwarded{msg.originalSenderName ? ` from ${msg.originalSenderName}` : ''}
                </div>
-               <div className='flex-1 min-w-0'>
-                  <p className='text-sm font-medium truncate'>{msg.fileName || 'Document'}</p>
-                  <p className={`text-xs ${isMine ? 'text-blue-100' : 'text-gray-400'}`}>{formatFileSize(msg.fileSize)}</p>
+            )}
+
+            {hasQuote && (
+               <QuoteBlock replyTo={msg.replyTo} isMine={isMine} onClick={onQuoteClick} />
+            )}
+
+            {msgType === 'post_link' && msg.postLink && (
+               <PostLinkCard postLink={msg.postLink} isMine={isMine} />
+            )}
+
+            {msgType === 'image' && msg.image && (
+               <img src={`${BASE_URL}${msg.image}`} alt='Shared' className='max-w-[240px] max-h-[200px] rounded-xl object-cover cursor-pointer' onClick={() => window.open(`${BASE_URL}${msg.image}`, '_blank')} />
+            )}
+
+            {msgType === 'file' && (
+               <div className='flex items-center gap-3 max-w-[220px]'>
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${isMine ? 'bg-blue-400' : 'bg-gray-200'}`}>
+                     <FileText className='w-5 h-5' />
+                  </div>
+                  <div className='flex-1 min-w-0'>
+                     <p className='text-sm font-medium truncate'>{msg.fileName || 'Document'}</p>
+                     <p className={`text-xs ${isMine ? 'text-blue-100' : 'text-gray-400'}`}>{formatFileSize(msg.fileSize)}</p>
+                  </div>
+                  <a href={`${BASE_URL}${msg.image}`} download={msg.fileName} onClick={e => e.stopPropagation()} className={`shrink-0 ${isMine ? 'text-white hover:text-blue-100' : 'text-gray-500 hover:text-gray-700'}`}>
+                     <Download className='w-4 h-4' />
+                  </a>
                </div>
-               <a href={`${BASE_URL}${msg.image}`} download={msg.fileName} onClick={e => e.stopPropagation()} className={`shrink-0 ${isMine ? 'text-white hover:text-blue-100' : 'text-gray-500 hover:text-gray-700'}`}>
-                  <Download className='w-4 h-4' />
+            )}
+
+            {msgType === 'location' && msg.location && (
+               <a href={`https://www.openstreetmap.org/?mlat=${msg.location.lat}&mlon=${msg.location.lng}#map=15/${msg.location.lat}/${msg.location.lng}`} target='_blank' rel='noopener noreferrer' className={`flex items-center gap-2 max-w-[220px] ${isMine ? 'text-white' : 'text-gray-800'}`}>
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${isMine ? 'bg-blue-400' : 'bg-green-100'}`}>
+                     <MapPin className={`w-5 h-5 ${isMine ? 'text-white' : 'text-green-600'}`} />
+                  </div>
+                  <div className='min-w-0'>
+                     <p className='text-sm font-medium'>📍 Location</p>
+                     <p className={`text-xs truncate ${isMine ? 'text-blue-100' : 'text-gray-400'}`}>
+                        {msg.location.label || `${msg.location.lat?.toFixed(4)}, ${msg.location.lng?.toFixed(4)}`}
+                     </p>
+                  </div>
                </a>
-            </div>
-         )}
+            )}
 
-         {msgType === 'location' && msg.location && (
-            <a href={`https://www.openstreetmap.org/?mlat=${msg.location.lat}&mlon=${msg.location.lng}#map=15/${msg.location.lat}/${msg.location.lng}`} target='_blank' rel='noopener noreferrer' className={`flex items-center gap-2 max-w-[220px] ${isMine ? 'text-white' : 'text-gray-800'}`}>
-               <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${isMine ? 'bg-blue-400' : 'bg-green-100'}`}>
-                  <MapPin className={`w-5 h-5 ${isMine ? 'text-white' : 'text-green-600'}`} />
-               </div>
-               <div className='min-w-0'>
-                  <p className='text-sm font-medium'>📍 Location</p>
-                  <p className={`text-xs truncate ${isMine ? 'text-blue-100' : 'text-gray-400'}`}>
-                     {msg.location.label || `${msg.location.lat?.toFixed(4)}, ${msg.location.lng?.toFixed(4)}`}
-                  </p>
-               </div>
-            </a>
+            {hasText && (
+               <p className={`text-sm break-words whitespace-pre-wrap max-w-[260px] ${msgType !== 'text' ? 'mt-1.5' : ''}`}>{msg.text}</p>
+            )}
+         </div>
+         
+         {showEmojiPicker && (
+            <EmojiPicker onSelect={(emoji) => { onReact?.(emoji); setShowEmojiPicker(false); }} onClose={() => setShowEmojiPicker(false)} />
          )}
-
-         {hasText && (
-            <p className={`text-sm break-words whitespace-pre-wrap max-w-[260px] ${msgType !== 'text' ? 'mt-1.5' : ''}`}>{msg.text}</p>
-         )}
+         
+         <MessageReactions reactions={msg.reactions} isMine={isMine} onReact={onReact} />
+         
+         <button
+            onClick={() => setShowEmojiPicker(true)}
+            className={`absolute -bottom-1 ${isMine ? '-left-8' : '-right-8'} opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-gray-100 rounded-full`}
+         >
+            <span className='text-sm'>😊</span>
+         </button>
       </div>
    );
 };
@@ -250,7 +309,7 @@ export default function Messaging() {
                const res = await get(`${BACKEND_API_URL}/chat/first-chat-user?user_id=${firstChatUserId}`);
                const u = await res.json();
                if (u && !u.message) firstChatUser = [u];
-            } catch {}
+            } catch { /* ignore first chat user fetch errors */ }
          }
 
          setUsers(() => {
@@ -271,9 +330,10 @@ export default function Messaging() {
       });
       handleFetchUsers();
       return () => disconnect();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
    }, []);
 
-   useEffect(() => { handleFetchMessages(); }, [selectedUserId]);
+   useEffect(() => { handleFetchMessages(); }, [selectedUserId]); // eslint-disable-line react-hooks/exhaustive-deps
 
    useEffect(() => {
       const handleClick = () => { setContextMenu(null); setShowAttachMenu(false); };
@@ -405,6 +465,15 @@ export default function Messaging() {
       setForwardModal(null);
    };
 
+   const handleReact = async (msgId, emoji) => {
+      if (!msgId) return;
+      try {
+         const res = await post(`${BACKEND_API_URL}/chat/messages/${msgId}/react`, { emoji });
+         const data = await res.json();
+         setMessages(prev => prev.map(m => m._id === msgId ? { ...m, reactions: data.reactions } : m));
+      } catch { toast.error('Failed to add reaction'); }
+   };
+
    return (
       <MainLayout>
          <div className='flex h-full w-full'>
@@ -459,6 +528,7 @@ export default function Messaging() {
                                   msg={msg}
                                   isMine={isMine}
                                   onQuoteClick={() => scrollToMessage(msg.replyTo)}
+                                  onReact={(emoji) => handleReact(msg._id, emoji)}
                                />
                             </div>
                          );

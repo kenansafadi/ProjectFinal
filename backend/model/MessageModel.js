@@ -30,6 +30,10 @@ const messageSchema = new mongoose.Schema(
       originalSenderName: { type: String, default: null },
       isRead: { type: Boolean, default: false },
       sender_name: { type: String, required: true },
+      reactions: {
+         type: [{ userId: String, emoji: String }],
+         default: [],
+      },
    },
    { timestamps: true }
 );
