@@ -122,21 +122,23 @@ const QuoteBlock = ({ replyTo, isMine, onClick }) => (
    </div>
 );
 
-const MessageReactions = ({ reactions, isMine, onReact }) => {
+const MessageReactions = ({ reactions, isMine, onReact, isOverlay }) => {
    if (!reactions?.length) return null;
    const emojiCounts = {};
    reactions.forEach(r => { emojiCounts[r.emoji] = (emojiCounts[r.emoji] || 0) + 1; });
    
    return (
-      <div className={`flex gap-1 mt-1 flex-wrap ${isMine ? 'justify-end' : 'justify-start'}`}>
+      <div className={`flex gap-1 ${isOverlay ? 'absolute -bottom-2 ' + (isMine ? 'right-0' : 'left-0') + ' bg-white border border-gray-100 shadow-sm rounded-full px-1.5 py-0.5 z-10' : 'mt-1 flex-wrap ' + (isMine ? 'justify-end' : 'justify-start')}`}>
          {Object.entries(emojiCounts).map(([emoji, count]) => (
             <button
                key={emoji}
                onClick={() => onReact?.(emoji)}
-               className={`text-xs px-2 py-0.5 rounded-full border transition-all cursor-pointer hover:scale-105 ${
-                  isMine 
-                     ? 'bg-blue-600 border-blue-400 text-white hover:bg-blue-700' 
-                     : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
+               className={`text-xs px-1.5 py-0.5 rounded-full border transition-all cursor-pointer hover:scale-105 ${
+                  isOverlay
+                     ? 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
+                     : isMine 
+                        ? 'bg-blue-600 border-blue-400 text-white hover:bg-blue-700' 
+                        : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
                }`}
             >
                {emoji} {count > 1 && <span className='ml-0.5'>{count}</span>}
@@ -146,10 +148,23 @@ const MessageReactions = ({ reactions, isMine, onReact }) => {
    );
 };
 
-const ReactionPicker = ({ onReact }) => {
+const ReactionPicker = ({ onReact, isMine }) => {
    const emojis = ['👍', '❤️', '😂', '😮', '😢'];
+   const pickerRef = useRef(null);
+   const [adjustedClass, setAdjustedClass] = useState('');
+
+   useEffect(() => {
+      if (!pickerRef.current) return;
+      const rect = pickerRef.current.getBoundingClientRect();
+      const windowWidth = window.innerWidth;
+      let classes = [];
+      if (rect.right > windowWidth - 10) classes.push('right-0 left-auto');
+      if (rect.left < 10) classes.push('left-0 right-auto');
+      if (classes.length) setAdjustedClass(classes.join(' '));
+   }, []);
+
    return (
-      <div className='absolute bottom-full left-0 mb-2 z-10'>
+      <div ref={pickerRef} className={`absolute bottom-full mb-2 z-10 ${adjustedClass} ${isMine ? 'right-0' : 'left-0'}`}>
          <div className='flex gap-1 py-1.5 px-2 bg-white border border-gray-100 shadow-xl rounded-full'>
             {emojis.map(emoji => (
                <button
@@ -234,11 +249,18 @@ const MessageBubble = ({ msg, isMine, onQuoteClick, onReact }) => {
 
             {/* Hover reaction picker */}
             <div className='absolute -bottom-6 left-1/2 -translate-x-1/2 hidden group-hover:block z-10'>
-               <ReactionPicker onReact={onReact} />
+               <ReactionPicker onReact={onReact} isMine={isMine} />
             </div>
+
+            {/* Reactions inside bubble for non-images, below for images */}
+            {msgType !== 'image' && (
+               <MessageReactions reactions={msg.reactions} isMine={isMine} onReact={onReact} isOverlay />
+            )}
          </div>
          
-         <MessageReactions reactions={msg.reactions} isMine={isMine} onReact={onReact} />
+         {msgType === 'image' && (
+            <MessageReactions reactions={msg.reactions} isMine={isMine} onReact={onReact} />
+         )}
       </div>
    );
 };
