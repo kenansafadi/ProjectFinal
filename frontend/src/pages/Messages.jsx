@@ -133,29 +133,29 @@ const MessageReactions = ({ reactions, isMine, onReact }) => {
             <button
                key={emoji}
                onClick={() => onReact?.(emoji)}
-               className={`text-xs px-1.5 py-0.5 rounded-full border transition-colors ${
+               className={`text-xs px-2 py-0.5 rounded-full border transition-all cursor-pointer hover:scale-105 ${
                   isMine 
                      ? 'bg-blue-600 border-blue-400 text-white hover:bg-blue-700' 
                      : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
                }`}
             >
-               {emoji} {count > 1 && count}
+               {emoji} {count > 1 && <span className='ml-0.5'>{count}</span>}
             </button>
          ))}
       </div>
    );
 };
 
-const EmojiPicker = ({ onSelect, onClose }) => {
+const ReactionPicker = ({ onReact }) => {
    const emojis = ['👍', '❤️', '😂', '😮', '😢'];
    return (
-      <div className='fixed inset-0 z-[200]' onClick={onClose}>
-         <div className='absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-white rounded-xl shadow-xl border border-gray-100 p-2 flex gap-1' onClick={e => e.stopPropagation()}>
+      <div className='absolute bottom-full left-0 mb-2 z-10'>
+         <div className='flex gap-1 py-1.5 px-2 bg-white border border-gray-100 shadow-xl rounded-full'>
             {emojis.map(emoji => (
                <button
                   key={emoji}
-                  onClick={() => onSelect(emoji)}
-                  className='text-xl p-1.5 hover:bg-gray-100 rounded-lg transition-colors'
+                  onClick={(e) => { e.stopPropagation(); onReact?.(emoji); }}
+                  className='text-xl leading-none hover:scale-125 transition-transform origin-bottom cursor-pointer p-1'
                >
                   {emoji}
                </button>
@@ -169,11 +169,10 @@ const MessageBubble = ({ msg, isMine, onQuoteClick, onReact }) => {
    const msgType = msg.type || (msg.image ? 'image' : 'text');
    const hasQuote = msg.replyTo?.senderName;
    const hasText = msg.text && msgType !== 'post_link';
-   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
    return (
-      <div className='relative group'>
-         <div className={`max-w-xs w-fit rounded-2xl ${
+      <div className='flex flex-col max-w-xs'>
+         <div className={`relative group w-fit rounded-2xl ${
             isMine ? 'bg-blue-500 text-white rounded-br-md' : 'bg-gray-100 text-gray-800 rounded-bl-md'
          } ${
             msgType === 'image' && !hasText && !hasQuote ? 'p-1'
@@ -232,20 +231,14 @@ const MessageBubble = ({ msg, isMine, onQuoteClick, onReact }) => {
             {hasText && (
                <p className={`text-sm break-words whitespace-pre-wrap max-w-[260px] ${msgType !== 'text' ? 'mt-1.5' : ''}`}>{msg.text}</p>
             )}
+
+            {/* Hover reaction picker */}
+            <div className='absolute -bottom-6 left-1/2 -translate-x-1/2 hidden group-hover:block z-10'>
+               <ReactionPicker onReact={onReact} />
+            </div>
          </div>
          
-         {showEmojiPicker && (
-            <EmojiPicker onSelect={(emoji) => { onReact?.(emoji); setShowEmojiPicker(false); }} onClose={() => setShowEmojiPicker(false)} />
-         )}
-         
          <MessageReactions reactions={msg.reactions} isMine={isMine} onReact={onReact} />
-         
-         <button
-            onClick={() => setShowEmojiPicker(true)}
-            className={`absolute -bottom-1 ${isMine ? '-left-8' : '-right-8'} opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-gray-100 rounded-full`}
-         >
-            <span className='text-sm'>😊</span>
-         </button>
       </div>
    );
 };
