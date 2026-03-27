@@ -32,26 +32,33 @@ const AttachmentMenu = ({ onSelect }) => (
    </div>
 );
 
-const ContextMenu = ({ x, y, message, isMine, onCopy, onForward, onReply, onDelete }) => (
-   <div className='fixed bg-white rounded-lg shadow-xl border border-gray-100 py-1 w-40 z-[100]' style={{ top: y, left: x }}>
-      <button onClick={onReply} className='flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 w-full cursor-pointer'>
-         <Reply className='w-3.5 h-3.5' />Reply
-      </button>
-      {message.text && (
-         <button onClick={onCopy} className='flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 w-full cursor-pointer'>
-            <Copy className='w-3.5 h-3.5' />Copy Text
+const ContextMenu = ({ x, y, message, isMine, onCopy, onForward, onReply, onDelete }) => {
+   const menuWidth = 160; // w-40 = 10rem = 160px
+   const menuHeight = isMine ? 160 : 130; // approximate height
+   const adjustedX = Math.min(x, window.innerWidth - menuWidth - 10);
+   const adjustedY = Math.min(y, window.innerHeight - menuHeight - 10);
+   
+   return (
+      <div className='fixed bg-white rounded-lg shadow-xl border border-gray-100 py-1 w-40 z-[100]' style={{ top: adjustedY, left: adjustedX }}>
+         <button onClick={onReply} className='flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 w-full cursor-pointer'>
+            <Reply className='w-3.5 h-3.5' />Reply
          </button>
-      )}
-      <button onClick={onForward} className='flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 w-full cursor-pointer'>
-         <CornerUpRight className='w-3.5 h-3.5' />Forward
-      </button>
-      {isMine && (
-         <button onClick={onDelete} className='flex items-center gap-2.5 px-4 py-2 text-sm text-red-500 hover:bg-red-50 w-full cursor-pointer'>
-            <Trash2 className='w-3.5 h-3.5' />Delete
+         {message.text && (
+            <button onClick={onCopy} className='flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 w-full cursor-pointer'>
+               <Copy className='w-3.5 h-3.5' />Copy Text
+            </button>
+         )}
+         <button onClick={onForward} className='flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 w-full cursor-pointer'>
+            <CornerUpRight className='w-3.5 h-3.5' />Forward
          </button>
-      )}
-   </div>
-);
+         {isMine && (
+            <button onClick={onDelete} className='flex items-center gap-2.5 px-4 py-2 text-sm text-red-500 hover:bg-red-50 w-full cursor-pointer'>
+               <Trash2 className='w-3.5 h-3.5' />Delete
+            </button>
+         )}
+      </div>
+   );
+};
 
 const ForwardModal = ({ users, currentUserId, onForward, onClose }) => (
    <div className='fixed inset-0 bg-black/40 flex items-center justify-center z-[100]'>
