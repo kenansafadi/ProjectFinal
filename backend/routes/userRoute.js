@@ -46,7 +46,7 @@ router.get("/me", authMiddleware, async (req, res) => {
     );
 
     if (!userData) {
-      return res.status(400).json({ message: "User not found", status: 400 });
+      return res.status(404).json({ message: "User not found", status: 404 });
     }
     res.json(userData || null);
   } catch (error) {
@@ -193,7 +193,7 @@ router.post("/follow", authMiddleware, async (req, res) => {
         .json({ message: "User you want to follow not found", status: 400 });
     }
 
-    if (userData?.following?.some((following) => following.userId == user.id)) {
+    if (userData?.following?.some((following) => following.userId == userId)) {
       return res
         .status(400)
         .json({ message: "User already followed", status: 400 });
@@ -218,6 +218,8 @@ router.post("/follow", authMiddleware, async (req, res) => {
       userId: userId,
       message: `${user.username} sent you a friend request`,
       sender_name: user.username,
+      senderId: user.id,
+      type: 'follow',
       read: false,
       text: `${user.username} sent you a friend request`,
     });
@@ -226,7 +228,7 @@ router.post("/follow", authMiddleware, async (req, res) => {
     await targetUser.save();
     await notification.save();
 
-    res.json({ message: "User followed successfully", status: 200 });
+    res.json({ message: "Follow request sent to user", status: 200 });
   } catch (error) {
     return res.status(400).json({ message: "Follow failed", status: 400 });
   }
@@ -341,48 +343,20 @@ router.post("/reject-friend-request", authMiddleware, async (req, res) => {
     const { userId } = req.body;
 
     const userData = await User.findById(user.id);
-    if (!userData) {
-      return res.status(400).json({ message: "User not found", status: 400 });
-    }
+    if (!userData) return res.status(400).json({ message: "User not found", status: 400 });
 
     const targetUser = await User.findById(userId);
-    if (!targetUser) {
-      return res
-        .status(400)
-        .json({ message: "User you want to unfollow not found", status: 400 });
-    }
+    if (!targetUser) return res.status(400).json({ message: "User not found", status: 400 });
 
-    userData.followers = userData?.followers?.map((following) => {
-      if (following.userId == userId) {
-        following.isAccepted = false;
-      }
-      return following;
-    });
-
-    targetUser.following = targetUser?.following?.map((following) => {
-      if (following.userId == user.id) {
-        following.isAccepted = false;
-      }
-      return following;
-    });
-
-    const notification = new Notification({
-      userId: userId,
-      message: `${user.username} rejected your friend request`,
-      sender_name: user.username,
-      read: false,
-      text: `${user.username} rejected your friend request`,
-    });
+    userData.followers = userData.followers.filter(f => f.userId != userId);
+    targetUser.following = targetUser.following.filter(f => f.userId != user.id);
 
     await userData.save();
     await targetUser.save();
-    await notification.save();
 
-    res.json({ message: "Friend request rejected successfully", status: 200 });
+    res.json({ message: "Friend request rejected", status: 200 });
   } catch (error) {
-    return res
-      .status(400)
-      .json({ message: "Friend request not rejected", status: 400 });
+    return res.status(400).json({ message: "Friend request not rejected", status: 400 });
   }
 });
 

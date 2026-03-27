@@ -19,7 +19,7 @@ import Notification from "./pages/Notifications";
 import BookmarksPage from "./pages/Bookmarks";
 import PostDetail from "./pages/PostDetail";
 import { useDispatch } from "react-redux";
-import { updateUser } from "./store/reducers/auth";
+import { updateUser, logout } from "./store/reducers/auth";
 import { get } from "./utils/request";
 
 // 🔐 Protect routes (only for logged-in users)
@@ -42,7 +42,13 @@ const App = () => {
   useEffect(() => {
     if (isAuthenticated) {
       get(`${import.meta.env.VITE_BACKEND_API_URL}/users/me`)
-        .then((res) => res.json())
+        .then((res) => {
+          if (!res.ok) {
+            dispatch(logout());
+            return null;
+          }
+          return res.json();
+        })
         .then((data) => {
           if (data && data._id) {
             dispatch(updateUser({ profilePicture: data.profilePicture, username: data.username }));

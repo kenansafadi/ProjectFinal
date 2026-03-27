@@ -18,6 +18,7 @@ const UserProfile = () => {
    const [isFollowed, setIsFollowed] = useState(false);
    const [isAccepted, setIsAccepted] = useState(false);
    const [followers, setFollowers] = useState([]);
+   const [following, setFollowing] = useState([]);
    const { user } = useAuth();
    const { id } = useParams();
 
@@ -75,6 +76,7 @@ const UserProfile = () => {
          const response = await get(`${BACKEND_API_URL}/users/public/${id}`);
          const data = await response.json();
          setFollowers(data?.followers?.filter((follower) => follower.isAccepted));
+         setFollowing(data?.following?.filter((followed) => followed.isAccepted));
          setIsFollowed(data?.followers?.some((follower) => follower.userId == user?.id));
          setIsAccepted(
             data?.followers?.some((follower) => follower.userId == user?.id && follower.isAccepted)
@@ -88,7 +90,7 @@ const UserProfile = () => {
 
    useEffect(() => {
       handleFetchUserProfile();
-   }, []);
+   }, [id]);
 
    useEffect(() => {
       handleFetchUserProfile();
@@ -123,7 +125,7 @@ const UserProfile = () => {
                {userProfile?._id !== user?.id && (
                   <button
                      onClick={isFollowed ? (isAccepted ? handleUnfollow : () => {}) : handleFollow}
-                     className={`flex items-center justify-center px-6 py-2 rounded-md text-white ${
+                     className={`flex items-center justify-center px-6 py-2 rounded-md text-white cursor-pointer ${
                         isFollowed
                            ? !isAccepted
                               ? '!bg-green-500'
@@ -152,6 +154,10 @@ const UserProfile = () => {
                <div className='flex items-center justify-center gap-2'>
                   <p className='text-sm font-medium text-gray-900'>{followers?.length}</p>
                   <p className='text-sm font-medium text-gray-900'>Followers</p>
+               </div>
+               <div className='flex items-center justify-center gap-2'>
+                  <p className='text-sm font-medium text-gray-900'>{following?.length}</p>
+                  <p className='text-sm font-medium text-gray-900'>Following</p>
                </div>
                {!userProfile?.isPrivate && (
                   <div className='flex items-center justify-center gap-2 '>

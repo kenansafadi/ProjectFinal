@@ -29,6 +29,16 @@ router.get('/users', authMiddleware, async (req, res) => {
          if (msg.receiverId.toString() !== userId) userIds.add(msg.receiverId.toString());
       });
 
+      const currentUser = await User.findById(userId, 'followers following');
+      if (currentUser) {
+         currentUser.followers?.forEach(f => {
+            if (f.isAccepted) userIds.add(f.userId.toString());
+         });
+         currentUser.following?.forEach(f => {
+            if (f.isAccepted) userIds.add(f.userId.toString());
+         });
+      }
+
       const users = await User.find(
          { _id: { $in: [...userIds] } },
          'username email _id profilePicture'

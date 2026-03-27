@@ -81,10 +81,12 @@ router.get('/', async (req, res) => {
          .populate('userId', 'username profilePicture')
          .sort({ createdAt: -1 });
 
+      const suggestionsLimit = parseInt(req.query.suggestionsLimit) || 6;
+
       const suggestions = await User.find(
          { _id: { $nin: [userId, ...allFollowingIds] } },
          'username profilePicture bio'
-      ).limit(6);
+      ).limit(suggestionsLimit);
 
       return res.json({
          posts: posts.map(p => ({ ...p.toObject(), author: p.toObject().userId })),

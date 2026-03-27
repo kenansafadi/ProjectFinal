@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Search } from 'lucide-react';
 import { get } from '../utils/request';
 import useAuth from '../hooks/useReduxAuth';
+import useClickOutside from '../hooks/useClickOutside';
 import UserAvatar from './common/UserAvatar';
 import { getAvatarUrl } from '../utils/avatar';
 
@@ -35,6 +36,9 @@ const SearchDropdown = ({ autoFocus }) => {
       setFilteredUsers(users.filter(u => u.username.toLowerCase().includes(value.toLowerCase())));
    };
 
+   const containerRef = useRef();
+   useClickOutside(containerRef, () => setFocused(false));
+
    useEffect(() => {
       if (!token) return;
       handleFetchUsers();
@@ -47,7 +51,7 @@ const SearchDropdown = ({ autoFocus }) => {
    const showDropdown = focused && query.length > 0;
 
    return (
-      <div className='relative w-full'>
+      <div className='relative w-full' ref={containerRef}>
          <div className={`flex items-center gap-2 px-3 py-2 bg-gray-50 border rounded-lg transition-colors ${focused ? 'border-gray-300 bg-white' : 'border-transparent'}`}>
             <Search className='w-3.5 h-3.5 text-gray-400 shrink-0' />
             <input
@@ -57,7 +61,6 @@ const SearchDropdown = ({ autoFocus }) => {
                value={query}
                onChange={handleSearch}
                onFocus={() => setFocused(true)}
-               onBlur={() => setTimeout(() => setFocused(false), 150)}
                className='w-full bg-transparent text-sm text-gray-800 placeholder-gray-400 focus:outline-none'
             />
          </div>

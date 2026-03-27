@@ -1,9 +1,9 @@
 import React from 'react';
 import { Bell, Heart, MessageCircle, UserPlus } from 'lucide-react';
 import moment from 'moment';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
-import { get } from '../utils/request';
+import { get, post } from '../utils/request';
 import { useState, useEffect } from 'react';
 import useNotifications from '../components/hooks/useNotifications';
 
@@ -11,8 +11,10 @@ const BACKEND_API_URL = import.meta.env.VITE_BACKEND_API_URL;
 
 const NotificationPage = () => {
    const [notification, setNotification] = useState({});
+   const [actionState, setActionState] = useState('');
    const id = useSearchParams()[0]?.get('id');
    const { markAsRead } = useNotifications();
+   const navigate = useNavigate();
 
    useEffect(() => {
       const fetchNotifications = async () => {
@@ -46,6 +48,25 @@ const NotificationPage = () => {
       }
    };
 
+   const handleFollowAction = async (action) => {
+      if (!notification?.senderId) return;
+      setActionState('loading');
+      const endpoint = action === 'accept' ? 'accept-friend-request' : 'reject-friend-request';
+      try {
+         const response = await post(`${BACKEND_API_URL}/users/${endpoint}`, {
+            userId: notification.senderId,
+         });
+         if (!response.ok) {
+            setActionState('idle');
+            return;
+         }
+         setActionState(action);
+         window.dispatchEvent(new CustomEvent('follow-request-updated'));
+      } catch (error) {
+         setActionState('idle');
+      }
+   };
+
    return (
       <div className='max-w-2xl mx-auto px-4 py-8'>
          <div className='flex justify-between items-center'>
@@ -60,14 +81,50 @@ const NotificationPage = () => {
 
             <div className='flex-1'>
                <p className='text-gray-700 text-sm'>
-                  From : <span className='font-medium'>{notification?.sender_name}</span>{' '}
+                  From :{' '}
+                  <span
+                     className='font-medium text-gray-900 hover:underline cursor-pointer'
+                     onClick={() =>
+                        notification?.senderId && navigate(`/public-profile/${notification.senderId}`)
+                     }
+                  >
+                     {notification?.sender_name || 'Unknown user'}
+                  </span>{' '}
                </p>
                <p className='text-xs text-gray-400 mt-1'>
-                  {moment(notification?.createdAt).fromNow()}
+                  {notification?.createdAt ? moment(notification.createdAt).fromNow() : 'Just now'}
                </p>
             </div>
 
-            <p>{notification?.text}</p>
+            <p className='text-gray-700'>{notification?.text || notification?.message || 'No details provided.'}</p>
+            {notification?.type === 'follow' && notification?.senderId && (
+               <div className='flex items-center gap-2'>
+                  {actionState === 'accept' ? (
+                     <p className='text-sm text-green-600'>Request accepted</p>
+                  ) : actionState === 'reject' ? (
+                     <p className='text-sm text-red-600'>Request declined</p>
+                  ) : (
+                     <>
+                        <button
+                           type='button'
+                           onClick={() => handleFollowAction('accept')}
+                           disabled={actionState === 'loading'}
+                           className='px-3 py-1.5 text-sm rounded-full bg-green-100 text-green-700 hover:bg-green-200 cursor-pointer'
+                        >
+                           Accept
+                        </button>
+                        <button
+                           type='button'
+                           onClick={() => handleFollowAction('reject')}
+                           disabled={actionState === 'loading'}
+                           className='px-3 py-1.5 text-sm rounded-full bg-red-100 text-red-700 hover:bg-red-200 cursor-pointer'
+                        >
+                           Decline
+                        </button>
+                     </>
+                  )}
+               </div>
+            )}
          </div>
       </div>
    );

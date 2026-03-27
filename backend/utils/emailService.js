@@ -65,16 +65,23 @@ const sendResetEmail = async (emailConfig, email, resetLink) => {
 
 const sendEmail = async (email, subject, html) => {
    try {
+      const emailUser = process.env.EMAIL_USER;
+      const emailPass = process.env.EMAIL_PASS;
+      
+      if (!emailUser || !emailPass) {
+         throw new Error('Email configuration missing: EMAIL_USER or EMAIL_PASS not set');
+      }
+      
       const transporter = nodemailer.createTransport({
          service: 'gmail',
          auth: {
-            user: process.env.EMAIL_USER,
-            pass: process.env.EMAIL_PASS,
+            user: emailUser,
+            pass: emailPass,
          },
       });
 
       const mailOptions = {
-         from: process.env.EMAIL_SENDER || process.env.EMAIL_USER,
+         from: process.env.EMAIL_SENDER || emailUser,
          to: email,
          subject,
          html,
@@ -82,8 +89,8 @@ const sendEmail = async (email, subject, html) => {
 
       await transporter.sendMail(mailOptions);
    } catch (error) {
-      console.log(error);
-      throw new Error('Failed to send email');
+      console.error('SendEmail error:', error);
+      throw new Error('Failed to send email: ' + error.message);
    }
 };
 
