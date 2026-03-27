@@ -14,11 +14,15 @@ const getNotificationsForUser = async (req, res) => {
 };
 
 // יצירת התראה חדשה
-const createNotification = async (userId, message) => {
+const createNotification = async (userId, message, senderName, senderId, type = 'notification', text = '') => {
     try {
         const newNotification = new Notification({
             userId,
             message,
+            sender_name: senderName,
+            senderId,
+            type,
+            text,
             read: false
         });
         await newNotification.save();

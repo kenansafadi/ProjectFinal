@@ -133,7 +133,14 @@ const followUser = async (req, res) => {
             await currentUser.save();
             await userToFollow.save();
 
-            await createNotification(userToFollow._id, `${currentUser.username} followed you`);
+            await createNotification(
+                userToFollow._id, 
+                `${currentUser.username} followed you`, 
+                currentUser.username,
+                currentUser._id.toString(),
+                'follow',
+                `${currentUser.username} wants to follow you`
+            );
 
             // שליחת התראה בזמן אמת למשתמש שעוקבים אחריו באמצעות Socket.IO
             io.to(userToFollow._id.toString()).emit("receiveNotification", {
