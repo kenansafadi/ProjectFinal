@@ -200,6 +200,7 @@ export default function Messaging() {
    const fileTypeRef = useRef('image');
    const msgRefs = useRef({});
    const [highlightedId, setHighlightedId] = useState(null);
+   const navigate = useNavigate();
 
    const firstChatUserId = params[0]?.get('user_id');
    const { disconnect, sendMessage: sendSocketMessage, receiveMessage } = useSocket();
