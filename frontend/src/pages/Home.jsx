@@ -42,12 +42,13 @@ const SuggestionCard = ({ user, onFollow }) => {
       e.stopPropagation();
       setLoading(true);
       try {
-         await post(`${BACKEND_API_URL}/users/follow`, { userId: user._id, name: user.username });
+         const response = await post(`${BACKEND_API_URL}/users/follow`, { userId: user._id, name: user.username });
+         if (!response.ok) return;
          setFollowed(true);
+         onFollow?.(user);
       } catch { /* ignore */ } finally {
          setLoading(false);
       }
-      onFollow?.();
    };
 
    return (
@@ -100,6 +101,7 @@ const WhoToFollow = ({ suggestions, onFollow, onShowMore, onShowLess, suggestion
 };
 
 const PendingRequests = ({ requests, onCancel }) => {
+   const navigate = useNavigate();
    if (!requests?.length) return null;
    return (
       <div className='bg-white rounded-xl border border-gray-100 shadow-sm mt-4 pt-5 overflow-hidden flex flex-col max-h-[300px]'>
@@ -107,9 +109,15 @@ const PendingRequests = ({ requests, onCancel }) => {
          <div className='space-y-4 px-5 pb-4 overflow-y-auto flex-1'>
             {requests.map(req => (
                <div key={req.userId} className='flex items-center justify-between'>
-                  <div className='flex items-center gap-2'>
+                  <div
+                     className='flex items-center gap-2 cursor-pointer'
+                     onClick={() => navigate(`/public-profile/${req.userId}`)}
+                  >
                      <UserAvatar username={req.name} size={32} />
-                     <span className='flex-1 truncate text-sm font-medium text-gray-800' title={req.name}>
+                     <span
+                        className='flex-1 truncate text-sm font-medium text-gray-800 hover:underline'
+                        title={req.name}
+                     >
                         {req.name.length > 12 ? req.name.substring(0, 12) + '...' : req.name}
                      </span>
                   </div>
@@ -191,6 +199,15 @@ const PostPage = () => {
       fetchUserData();
    }, []);
 
+   useEffect(() => {
+      const refreshRequests = () => {
+         fetchUserData();
+         fetchPosts();
+      };
+      window.addEventListener('follow-request-updated', refreshRequests);
+      return () => window.removeEventListener('follow-request-updated', refreshRequests);
+   }, []);
+
    return (
       <MainLayout>
          <div className='flex gap-6 h-full w-full'>
@@ -228,7 +245,20 @@ const PostPage = () => {
                   {suggestions.length > 0 && (
                      <WhoToFollow 
                         suggestions={suggestions} 
-                        onFollow={fetchPosts} 
+                        onFollow={(followedUser) => {
+                           if (followedUser?._id) {
+                              setPendingRequests((prev) => {
+                                 const exists = prev.some((req) => req.userId === followedUser._id);
+                                 if (exists) return prev;
+                                 return [
+                                    ...prev,
+                                    { userId: followedUser._id, name: followedUser.username, isAccepted: false },
+                                 ];
+                              });
+                           }
+                           fetchPosts();
+                           fetchUserData();
+                        }}
                         onShowMore={handleShowMore} 
                         onShowLess={handleShowLess}
                         suggestionsLimit={suggestionsLimit}

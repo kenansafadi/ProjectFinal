@@ -33,8 +33,11 @@ const Navbar = ({ onMenuToggle }) => {
       if (!senderId) return;
       const endpoint = action === 'accept' ? 'accept-friend-request' : 'reject-friend-request';
       try {
-         await post(`${BACKEND_API_URL}/users/${endpoint}`, { userId: senderId });
+         const response = await post(`${BACKEND_API_URL}/users/${endpoint}`, { userId: senderId });
+         if (!response.ok) return;
          setHandledRequests(prev => ({ ...prev, [notif._id]: action }));
+         markAsRead(notif._id);
+         window.dispatchEvent(new CustomEvent('follow-request-updated'));
       } catch { /* ignore */ }
    };
 
@@ -57,7 +60,7 @@ const Navbar = ({ onMenuToggle }) => {
             <div className='flex items-center gap-3'>
                <button
                   onClick={onMenuToggle}
-                  className='md:hidden text-gray-500 hover:text-gray-800 cursor-pointer'
+                  className='md:hidden text-gray-500 hover:text-gray-800 cursor-pointer h-8 w-8 flex items-center justify-center bg-transparent border-0 p-0 appearance-none'
                >
                   <Menu className='w-5 h-5' />
                </button>
@@ -74,7 +77,7 @@ const Navbar = ({ onMenuToggle }) => {
                {/* Mobile search toggle */}
                <button
                   onClick={() => setShowMobileSearch(p => !p)}
-                  className='md:hidden w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-700 cursor-pointer rounded-lg hover:bg-gray-100 transition-colors'
+                  className='md:hidden w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-700 cursor-pointer rounded-lg hover:bg-gray-100 transition-colors bg-transparent border-0 p-0 appearance-none'
                >
                   <Search className='w-4 h-4' />
                </button>
@@ -84,7 +87,7 @@ const Navbar = ({ onMenuToggle }) => {
                   <div className='relative'>
                      <button
                         onClick={() => { setShowNotifications(p => !p); setShowUserMenu(false); }}
-                        className='relative cursor-pointer w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors'
+                        className='relative cursor-pointer w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors bg-transparent border-0 p-0 appearance-none'
                      >
                         <Bell className='w-4 h-4' />
                         {unreadCount > 0 && (
@@ -104,24 +107,56 @@ const Navbar = ({ onMenuToggle }) => {
                            </div>
                            <ul className='max-h-64 overflow-y-auto divide-y divide-gray-50'>
                               {Array.isArray(notifications) &&
-                                 notifications.filter(n => !n.read).map((notif) => (
-                                    <li
-                                       key={notif._id}
-                                       onClick={() => {
-                                          markAsRead(notif._id);
-                                          if (notif.type === 'message' && notif.senderId) {
-                                             navigate(`/messages?user_id=${notif.senderId}`);
-                                          } else {
-                                             navigate(`/notification?id=${notif._id}`);
-                                          }
-                                          setShowNotifications(false);
-                                       }}
-                                       className='flex items-start gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer transition-colors'
-                                    >
-                                       <div className='w-1.5 h-1.5 rounded-full bg-blue-500 mt-1.5 shrink-0' />
-                                       {notif.message}
-                                    </li>
-                                 ))}
+                                 notifications.filter(n => !n.read).map((notif) => {
+                                    const handledAction = handledRequests[notif._id];
+                                    const isFollowRequest = notif.type === 'follow' && notif.senderId;
+                                    return (
+                                       <li
+                                          key={notif._id}
+                                          onClick={() => {
+                                             if (isFollowRequest) return;
+                                             markAsRead(notif._id);
+                                             if (notif.type === 'message' && notif.senderId) {
+                                                navigate(`/messages?user_id=${notif.senderId}`);
+                                             } else {
+                                                navigate('/notifications');
+                                             }
+                                             setShowNotifications(false);
+                                          }}
+                                          className='px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors'
+                                       >
+                                          <div className='flex items-start gap-3'>
+                                             <div className='w-1.5 h-1.5 rounded-full bg-blue-500 mt-1.5 shrink-0' />
+                                             <div className='flex-1'>
+                                                <p className={isFollowRequest ? 'cursor-default' : 'cursor-pointer'}>
+                                                   {notif.message}
+                                                </p>
+                                                {isFollowRequest && !handledAction && (
+                                                   <div className='flex items-center gap-2 mt-2'>
+                                                      <button
+                                                         onClick={(e) => handleFollowAction(e, notif, 'accept')}
+                                                         className='px-3 py-1 text-xs rounded-full bg-green-100 text-green-700 hover:bg-green-200 cursor-pointer'
+                                                      >
+                                                         Accept
+                                                      </button>
+                                                      <button
+                                                         onClick={(e) => handleFollowAction(e, notif, 'reject')}
+                                                         className='px-3 py-1 text-xs rounded-full bg-red-100 text-red-700 hover:bg-red-200 cursor-pointer'
+                                                      >
+                                                         Decline
+                                                      </button>
+                                                   </div>
+                                                )}
+                                                {isFollowRequest && handledAction && (
+                                                   <p className='mt-2 text-xs text-gray-500'>
+                                                      {handledAction === 'accept' ? 'Accepted' : 'Declined'}
+                                                   </p>
+                                                )}
+                                             </div>
+                                          </div>
+                                       </li>
+                                    );
+                                 })}
                            </ul>
                            {unreadCount === 0 && (
                               <div className='px-4 py-6 text-sm text-gray-400 text-center'>You're all caught up ✓</div>
@@ -135,7 +170,7 @@ const Navbar = ({ onMenuToggle }) => {
                <div className='relative'>
                   <button
                      onClick={() => { setShowUserMenu(p => !p); setShowNotifications(false); }}
-                     className='flex items-center gap-2 cursor-pointer group'
+                     className='flex items-center gap-2 cursor-pointer group h-8 bg-transparent border-0 p-0 appearance-none'
                   >
                      <UserAvatar src={avatarSrc} username={user?.username} size='sm' />
                      <span className='hidden md:block text-sm font-medium text-gray-700 group-hover:text-gray-900 transition-colors max-w-[120px] truncate'>
