@@ -99,10 +99,33 @@ const WhoToFollow = ({ suggestions, onFollow, onShowMore, onShowLess, suggestion
    );
 };
 
+const PendingRequests = ({ requests, onCancel }) => {
+   if (!requests?.length) return null;
+   return (
+      <div className='bg-white rounded-xl border border-gray-100 shadow-sm mt-4 pt-5 overflow-hidden flex flex-col max-h-[300px]'>
+         <h3 className='text-sm font-semibold text-gray-700 px-5 mb-4 shrink-0'>Sent Requests</h3>
+         <div className='space-y-4 px-5 pb-4 overflow-y-auto flex-1'>
+            {requests.map(req => (
+               <div key={req.userId} className='flex items-center justify-between'>
+                  <div className='flex items-center gap-2'>
+                     <UserAvatar username={req.name} size={32} />
+                     <span className='flex-1 truncate text-sm font-medium text-gray-800' title={req.name}>
+                        {req.name.length > 12 ? req.name.substring(0, 12) + '...' : req.name}
+                     </span>
+                  </div>
+                  <button onClick={() => onCancel(req.userId)} className='text-xs font-medium text-red-500 hover:text-red-700 hover:bg-red-50 px-2 py-1 flex-shrink-0 rounded transition-colors cursor-pointer'>Cancel</button>
+               </div>
+            ))}
+         </div>
+      </div>
+   );
+};
+
 const PostPage = () => {
    const [posts, setPosts] = useState([]);
    const [bookmarks, setBookmarks] = useState([]);
    const [suggestions, setSuggestions] = useState([]);
+   const [pendingRequests, setPendingRequests] = useState([]);
    const [isLoading, setIsLoading] = useState(true);
    const [suggestionsLimit, setSuggestionsLimit] = useState(6);
    const { user } = useAuth();
@@ -131,12 +154,25 @@ const PostPage = () => {
       fetchPosts(6);
    };
 
-   const fetchBookmarks = async () => {
+   const fetchUserData = async () => {
       try {
          const res = await get(`${BACKEND_API_URL}/users/me`);
          const data = await res.json();
          setBookmarks(data?.bookmarks || []);
+         setPendingRequests(data?.following?.filter(f => !f.isAccepted) || []);
       } catch { /* ignore */ }
+   };
+
+   const handleCancelRequest = async (userId) => {
+      try {
+         const res = await post(`${BACKEND_API_URL}/users/unfollow`, { userId });
+         if (res.ok) {
+            setPendingRequests(prev => prev.filter(req => req.userId !== userId));
+            fetchPosts(); 
+         }
+      } catch (error) {
+         console.error('Error cancelling request:', error);
+      }
    };
 
    const handleLikePost = async (postId, isLiked) => {
@@ -152,7 +188,7 @@ const PostPage = () => {
 
    useEffect(() => {
       fetchPosts();
-      fetchBookmarks();
+      fetchUserData();
    }, []);
 
    return (
@@ -187,15 +223,20 @@ const PostPage = () => {
             </div>
 
             {/* Right sidebar — sticky, always visible */}
-            {suggestions.length > 0 && (
-               <div className='w-72 shrink-0 py-2'>
-                  <WhoToFollow 
-                     suggestions={suggestions} 
-                     onFollow={fetchPosts} 
-                     onShowMore={handleShowMore} 
-                     onShowLess={handleShowLess}
-                     suggestionsLimit={suggestionsLimit}
-                  />
+            {(suggestions.length > 0 || pendingRequests.length > 0) && (
+               <div className='w-72 shrink-0 py-2 flex flex-col'>
+                  {suggestions.length > 0 && (
+                     <WhoToFollow 
+                        suggestions={suggestions} 
+                        onFollow={fetchPosts} 
+                        onShowMore={handleShowMore} 
+                        onShowLess={handleShowLess}
+                        suggestionsLimit={suggestionsLimit}
+                     />
+                  )}
+                  {pendingRequests.length > 0 && (
+                     <PendingRequests requests={pendingRequests} onCancel={handleCancelRequest} />
+                  )}
                </div>
             )}
          </div>
