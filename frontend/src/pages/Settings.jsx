@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 import { Camera } from 'lucide-react';
-import useAuth from '../hooks/useReduxAuth';
 import MainLayout from '../components/Layout';
 import { get, put, postFormData } from '../utils/request';
 import UserAvatar from '../components/common/UserAvatar';

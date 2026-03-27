@@ -62,7 +62,7 @@ const NotificationPage = () => {
          }
          setActionState(action);
          window.dispatchEvent(new CustomEvent('follow-request-updated'));
-      } catch (error) {
+      } catch {
          setActionState('idle');
       }
    };

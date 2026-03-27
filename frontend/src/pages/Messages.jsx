@@ -1,4 +1,5 @@
-import { useEffect, useState, useRef, createPortal } from 'react';
+import { useEffect, useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { ImagePlus, X, Send, Paperclip, MapPin, FileText, Download, CornerUpRight, Trash2, Copy, Reply, ExternalLink } from 'lucide-react';
 import useAuth from '../hooks/useReduxAuth';
 import MainLayout from '../components/Layout';
@@ -148,24 +149,21 @@ const MessageReactions = ({ reactions, isMine, onReact, isOverlay }) => {
    );
 };
 
-const ReactionPicker = ({ onReact, parentRef }) => {
+const ReactionPicker = ({ onReact, parentRef, onMouseEnter, onMouseLeave, currentEmoji }) => {
    const emojis = ['👍', '❤️', '😂', '😮', '😢'];
    const [position, setPosition] = useState({ left: '50%', transform: 'translateX(-50%)' });
 
    useEffect(() => {
       if (!parentRef?.current) return;
       const parentRect = parentRef.current.getBoundingClientRect();
-      const pickerWidth = 200; // approximate width
+      const pickerWidth = 200;
       const windowWidth = window.innerWidth;
       
-      // Center by default
       let left = parentRect.left + parentRect.width / 2;
       
-      // Adjust if near right edge
       if (left + pickerWidth / 2 > windowWidth - 10) {
          left = windowWidth - pickerWidth / 2 - 10;
       }
-      // Adjust if near left edge  
       if (left - pickerWidth / 2 < 10) {
          left = pickerWidth / 2 + 10;
       }
@@ -179,13 +177,20 @@ const ReactionPicker = ({ onReact, parentRef }) => {
    }, [parentRef]);
 
    return (
-      <div style={position} className='z-[300]'>
+      <div 
+         style={position} 
+         className='z-[300]'
+         onMouseEnter={onMouseEnter}
+         onMouseLeave={onMouseLeave}
+      >
          <div className='flex gap-1 py-1.5 px-2 bg-white border border-gray-100 shadow-xl rounded-full'>
             {emojis.map(emoji => (
                <button
                   key={emoji}
                   onClick={(e) => { e.stopPropagation(); onReact?.(emoji); }}
-                  className='text-xl leading-none hover:scale-125 transition-transform origin-bottom cursor-pointer p-1'
+                  className={`text-xl leading-none hover:scale-125 transition-transform origin-bottom cursor-pointer p-1 rounded-full ${
+                     emoji === currentEmoji ? 'bg-blue-100' : ''
+                  }`}
                >
                   {emoji}
                </button>
@@ -195,19 +200,34 @@ const ReactionPicker = ({ onReact, parentRef }) => {
    );
 };
 
-const MessageBubble = ({ msg, isMine, onQuoteClick, onReact }) => {
+const MessageBubble = ({ msg, isMine, currentUser, onQuoteClick, onReact }) => {
    const msgType = msg.type || (msg.image ? 'image' : 'text');
    const hasQuote = msg.replyTo?.senderName;
    const hasText = msg.text && msgType !== 'post_link';
    const bubbleRef = useRef(null);
    const [showPicker, setShowPicker] = useState(false);
+   const hoverTimeoutRef = useRef(null);
+
+   const handleMouseEnter = () => {
+      if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+      setShowPicker(true);
+   };
+
+   const handleMouseLeave = () => {
+      // Small delay to allow moving to picker
+      hoverTimeoutRef.current = setTimeout(() => setShowPicker(false), 150);
+   };
+
+   useEffect(() => () => {
+      if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+   }, []);
 
    return (
       <div className='flex flex-col max-w-xs'>
          <div 
             ref={bubbleRef}
-            onMouseEnter={() => setShowPicker(true)}
-            onMouseLeave={() => setShowPicker(false)}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
             className={`relative w-fit rounded-2xl ${
                isMine ? 'bg-blue-500 text-white rounded-br-md' : 'bg-gray-100 text-gray-800 rounded-bl-md'
             } ${
@@ -271,7 +291,13 @@ const MessageBubble = ({ msg, isMine, onQuoteClick, onReact }) => {
 
             {/* Hover reaction picker - portal to body */}
             {showPicker && createPortal(
-               <ReactionPicker onReact={onReact} parentRef={bubbleRef} />,
+               <ReactionPicker 
+                  onReact={onReact} 
+                  parentRef={bubbleRef}
+                  onMouseEnter={handleMouseEnter}
+                  onMouseLeave={handleMouseLeave}
+                  currentEmoji={msg.reactions?.find(r => String(r.userId) === String(currentUser?.id))?.emoji}
+               />,
                document.body
             )}
 
@@ -505,11 +531,38 @@ export default function Messaging() {
 
    const handleReact = async (msgId, emoji) => {
       if (!msgId) return;
+      
+      // Optimistic update
+      const prevMessages = [...messages];
+      const msgIndex = messages.findIndex(m => m._id === msgId);
+      if (msgIndex === -1) return;
+      
+      const msg = messages[msgIndex];
+      const reactions = [...(msg.reactions || [])];
+      const existingIdx = reactions.findIndex(r => String(r.userId) === String(user?.id));
+      
+      let newReactions;
+      if (existingIdx !== -1) {
+         if (reactions[existingIdx].emoji === emoji) {
+            newReactions = reactions.filter((_, i) => i !== existingIdx);
+         } else {
+            newReactions = [...reactions];
+            newReactions[existingIdx] = { ...newReactions[existingIdx], emoji };
+         }
+      } else {
+         newReactions = [...reactions, { userId: user?.id, emoji }];
+      }
+      
+      setMessages(prev => prev.map(m => m._id === msgId ? { ...m, reactions: newReactions } : m));
+      
       try {
          const res = await post(`${BACKEND_API_URL}/chat/messages/${msgId}/react`, { emoji });
          const data = await res.json();
          setMessages(prev => prev.map(m => m._id === msgId ? { ...m, reactions: data.reactions } : m));
-      } catch { toast.error('Failed to add reaction'); }
+      } catch {
+         toast.error('Failed to add reaction');
+         setMessages(prevMessages); // Rollback
+      }
    };
 
    return (
@@ -565,6 +618,7 @@ export default function Messaging() {
                                <MessageBubble
                                   msg={msg}
                                   isMine={isMine}
+                                  currentUser={currentUser}
                                   onQuoteClick={() => scrollToMessage(msg.replyTo)}
                                   onReact={(emoji) => handleReact(msg._id, emoji)}
                                />

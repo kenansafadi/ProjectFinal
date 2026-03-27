@@ -1,6 +1,5 @@
 // NotificationProvider.jsx
 import { createContext, useContext, useState, useEffect } from "react";
-import { connectNotifications, disconnectNotifications } from "../../services/NotificationServices";
 import useAuth from "../../hooks/useReduxAuth";
 const NotificationContext = createContext();
 
@@ -33,7 +32,7 @@ export const NotificationProvider = ({ children }) => {
 
     useEffect(() => {
         if (user) {
-            import("../../services/NotificationServices").then(({ fetchNotifications, connectNotifications, disconnectNotifications }) => {
+            import("../../services/NotificationServices").then(({ fetchNotifications, connectNotifications }) => {
                 const userId = user.id || user._id;
                 fetchNotifications(userId).then((data) => {
                     setNotifications(data || []);
