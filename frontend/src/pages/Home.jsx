@@ -74,7 +74,7 @@ const SuggestionCard = ({ user, onFollow }) => {
    );
 };
 
-const WhoToFollow = ({ suggestions, onFollow }) => {
+const WhoToFollow = ({ suggestions, onFollow, onShowMore }) => {
    if (!suggestions?.length) return null;
    return (
       <div className='bg-white rounded-xl border border-gray-100 shadow-sm pt-5 sticky top-0 overflow-hidden'>
@@ -85,7 +85,7 @@ const WhoToFollow = ({ suggestions, onFollow }) => {
             ))}
          </div>
          <div className='px-5 pb-5'>
-            <button className='text-xs font-medium text-gray-400 hover:text-gray-700 transition-colors cursor-pointer'>Show more</button>
+            <button onClick={onShowMore} className='text-xs font-medium text-gray-400 hover:text-gray-700 transition-colors cursor-pointer'>Show more</button>
          </div>
       </div>
    );
@@ -96,11 +96,12 @@ const PostPage = () => {
    const [bookmarks, setBookmarks] = useState([]);
    const [suggestions, setSuggestions] = useState([]);
    const [isLoading, setIsLoading] = useState(true);
+   const [suggestionsLimit, setSuggestionsLimit] = useState(6);
    const { user } = useAuth();
 
-   const fetchPosts = async () => {
+   const fetchPosts = async (limit = suggestionsLimit) => {
       try {
-         const res = await get(`${BACKEND_API_URL}/posts`);
+         const res = await get(`${BACKEND_API_URL}/posts?suggestionsLimit=${limit}`);
          const data = await res.json();
          setPosts(Array.isArray(data.posts) ? data.posts : []);
          setSuggestions(Array.isArray(data.suggestions) ? data.suggestions : []);
@@ -109,6 +110,12 @@ const PostPage = () => {
       } finally {
          setIsLoading(false);
       }
+   };
+
+   const handleShowMore = () => {
+      const next = suggestionsLimit + 6;
+      setSuggestionsLimit(next);
+      fetchPosts(next);
    };
 
    const fetchBookmarks = async () => {
@@ -169,7 +176,7 @@ const PostPage = () => {
             {/* Right sidebar — sticky, always visible */}
             {suggestions.length > 0 && (
                <div className='w-72 shrink-0 py-2'>
-                  <WhoToFollow suggestions={suggestions} onFollow={fetchPosts} />
+            <WhoToFollow suggestions={suggestions} onFollow={fetchPosts} onShowMore={handleShowMore} />
                </div>
             )}
          </div>
