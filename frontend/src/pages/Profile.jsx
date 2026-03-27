@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { get } from '../utils/request';
+import { get, post } from '../utils/request';
 import UserAvatar from '../components/common/UserAvatar';
 const BACKEND_API_URL = import.meta.env.VITE_BACKEND_API_URL;
 
@@ -10,6 +10,9 @@ const UserProfile = () => {
    const [loading, setLoading] = useState(true);
    const navigate = useNavigate();
    const [followers, setFollowers] = useState([]);
+   const [following, setFollowing] = useState([]);
+   const [pendingFollowers, setPendingFollowers] = useState([]);
+   const [actionLoading, setActionLoading] = useState(null);
 
    const handleFetchUserProfile = async () => {
       try {
