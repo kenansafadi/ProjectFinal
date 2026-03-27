@@ -1,107 +1,259 @@
 import { useEffect, useState, useRef } from 'react';
-import socketService from '../services/chatServices';
+import { ImagePlus, X, Send, Paperclip, MapPin, FileText, Download, CornerUpRight, Trash2, Copy, Reply, ExternalLink } from 'lucide-react';
 import useAuth from '../hooks/useReduxAuth';
 import MainLayout from '../components/Layout';
 import useSocket from '../hooks/useSocket';
-import { get } from '../utils/request';
-import { useSearchParams } from 'react-router-dom';
+import { get, post, postFormData, del } from '../utils/request';
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import UserAvatar from '../components/common/UserAvatar';
 import toast from 'react-hot-toast';
+
 const BACKEND_API_URL = import.meta.env.VITE_BACKEND_API_URL;
+const BASE_URL = BACKEND_API_URL.replace('/api', '');
+
+function formatFileSize(bytes) {
+   if (!bytes) return '';
+   if (bytes < 1024) return `${bytes} B`;
+   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+const AttachmentMenu = ({ onSelect }) => (
+   <div className='absolute bottom-full left-0 mb-2 bg-white rounded-xl shadow-lg border border-gray-100 py-1.5 w-44 z-50'>
+      <button onClick={() => onSelect('image')} className='flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 w-full cursor-pointer'>
+         <ImagePlus className='w-4 h-4 text-blue-500' />Photo
+      </button>
+      <button onClick={() => onSelect('file')} className='flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 w-full cursor-pointer'>
+         <FileText className='w-4 h-4 text-orange-500' />Document
+      </button>
+      <button onClick={() => onSelect('location')} className='flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 w-full cursor-pointer'>
+         <MapPin className='w-4 h-4 text-green-500' />Location
+      </button>
+   </div>
+);
+
+const ContextMenu = ({ x, y, message, isMine, onCopy, onForward, onReply, onDelete }) => (
+   <div className='fixed bg-white rounded-lg shadow-xl border border-gray-100 py-1 w-40 z-[100]' style={{ top: y, left: x }}>
+      <button onClick={onReply} className='flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 w-full cursor-pointer'>
+         <Reply className='w-3.5 h-3.5' />Reply
+      </button>
+      {message.text && (
+         <button onClick={onCopy} className='flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 w-full cursor-pointer'>
+            <Copy className='w-3.5 h-3.5' />Copy Text
+         </button>
+      )}
+      <button onClick={onForward} className='flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 w-full cursor-pointer'>
+         <CornerUpRight className='w-3.5 h-3.5' />Forward
+      </button>
+      {isMine && (
+         <button onClick={onDelete} className='flex items-center gap-2.5 px-4 py-2 text-sm text-red-500 hover:bg-red-50 w-full cursor-pointer'>
+            <Trash2 className='w-3.5 h-3.5' />Delete
+         </button>
+      )}
+   </div>
+);
+
+const ForwardModal = ({ users, currentUserId, onForward, onClose }) => (
+   <div className='fixed inset-0 bg-black/40 flex items-center justify-center z-[100]'>
+      <div className='bg-white rounded-xl w-80 max-h-96 shadow-2xl'>
+         <div className='flex items-center justify-between p-4 border-b border-gray-100'>
+            <h3 className='text-sm font-semibold text-gray-900'>Forward to...</h3>
+            <button onClick={onClose} className='text-gray-400 hover:text-gray-600 cursor-pointer'><X className='w-4 h-4' /></button>
+         </div>
+         <div className='overflow-y-auto max-h-72'>
+            {users.filter(u => u._id !== currentUserId).map(u => (
+               <button key={u._id} onClick={() => onForward(u._id)} className='flex items-center gap-3 px-4 py-3 hover:bg-gray-50 w-full cursor-pointer transition-colors'>
+                  <UserAvatar src={u.profilePicture ? `${BASE_URL}${u.profilePicture}` : null} username={u.username} size='sm' />
+                  <span className='text-sm text-gray-800'>{u.username}</span>
+               </button>
+            ))}
+         </div>
+      </div>
+   </div>
+);
+
+const ReplyBar = ({ replyingTo, onCancel }) => (
+   <div className='px-5 py-2 border-t border-gray-100 bg-gray-50 flex items-center gap-3'>
+      <div className='flex-1 border-l-2 border-blue-400 pl-3'>
+         <p className='text-xs font-semibold text-blue-500'>{replyingTo.senderName}</p>
+         <p className='text-xs text-gray-500 truncate'>{replyingTo.text || '📷 Media'}</p>
+      </div>
+      <button onClick={onCancel} className='text-gray-400 hover:text-gray-600 cursor-pointer shrink-0'><X className='w-4 h-4' /></button>
+   </div>
+);
+
+const PostLinkCard = ({ postLink, isMine }) => {
+   const navigate = useNavigate();
+   return (
+      <div
+         onClick={() => navigate(`/post/${postLink.postId}`)}
+         className={`rounded-xl overflow-hidden cursor-pointer max-w-[240px] ${isMine ? 'bg-blue-600' : 'bg-white border border-gray-200'}`}
+      >
+         {postLink.image && (
+            <img src={`${BASE_URL}${postLink.image}`} alt='' className='w-full h-28 object-cover' />
+         )}
+         <div className='p-3'>
+            <p className={`text-xs font-semibold line-clamp-1 ${isMine ? 'text-white' : 'text-gray-900'}`}>{postLink.title}</p>
+            {postLink.content && (
+               <p className={`text-xs mt-0.5 line-clamp-2 ${isMine ? 'text-blue-100' : 'text-gray-500'}`}>{postLink.content}</p>
+            )}
+            <div className={`flex items-center gap-1 mt-2 text-[11px] ${isMine ? 'text-blue-200' : 'text-gray-400'}`}>
+               <ExternalLink className='w-3 h-3' />View post
+            </div>
+         </div>
+      </div>
+   );
+};
+
+const QuoteBlock = ({ replyTo, isMine, onClick }) => (
+   <div
+      onClick={onClick}
+      className={`border-l-2 pl-2.5 py-0.5 mb-1.5 rounded-r cursor-pointer transition-opacity hover:opacity-70 ${isMine ? 'border-blue-300' : 'border-gray-400'}`}
+   >
+      <p className={`text-[11px] font-semibold ${isMine ? 'text-blue-100' : 'text-gray-500'}`}>{replyTo.senderName}</p>
+      <p className={`text-[11px] truncate max-w-[180px] ${isMine ? 'text-blue-100' : 'text-gray-400'}`}>{replyTo.text || '📷 Media'}</p>
+   </div>
+);
+
+const MessageBubble = ({ msg, isMine, onQuoteClick }) => {
+   const msgType = msg.type || (msg.image ? 'image' : 'text');
+   const hasQuote = msg.replyTo?.senderName;
+   const hasText = msg.text && msgType !== 'post_link';
+
+   return (
+      <div className={`max-w-xs w-fit rounded-2xl ${
+         isMine ? 'bg-blue-500 text-white rounded-br-md' : 'bg-gray-100 text-gray-800 rounded-bl-md'
+      } ${
+         msgType === 'image' && !hasText && !hasQuote ? 'p-1'
+         : msgType === 'post_link' ? 'p-0 overflow-hidden'
+         : 'px-4 py-2.5'
+      }`}>
+
+         {msg.forwarded && msgType !== 'post_link' && (
+            <div className={`text-[11px] flex items-center gap-1 mb-1 ${isMine ? 'text-blue-100' : 'text-gray-400'}`}>
+               <CornerUpRight className='w-3 h-3' />
+               Forwarded{msg.originalSenderName ? ` from ${msg.originalSenderName}` : ''}
+            </div>
+         )}
+
+         {hasQuote && (
+            <QuoteBlock replyTo={msg.replyTo} isMine={isMine} onClick={onQuoteClick} />
+         )}
+
+         {msgType === 'post_link' && msg.postLink && (
+            <PostLinkCard postLink={msg.postLink} isMine={isMine} />
+         )}
+
+         {msgType === 'image' && msg.image && (
+            <img src={`${BASE_URL}${msg.image}`} alt='Shared' className='max-w-[240px] max-h-[200px] rounded-xl object-cover cursor-pointer' onClick={() => window.open(`${BASE_URL}${msg.image}`, '_blank')} />
+         )}
+
+         {msgType === 'file' && (
+            <div className='flex items-center gap-3 max-w-[220px]'>
+               <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${isMine ? 'bg-blue-400' : 'bg-gray-200'}`}>
+                  <FileText className='w-5 h-5' />
+               </div>
+               <div className='flex-1 min-w-0'>
+                  <p className='text-sm font-medium truncate'>{msg.fileName || 'Document'}</p>
+                  <p className={`text-xs ${isMine ? 'text-blue-100' : 'text-gray-400'}`}>{formatFileSize(msg.fileSize)}</p>
+               </div>
+               <a href={`${BASE_URL}${msg.image}`} download={msg.fileName} onClick={e => e.stopPropagation()} className={`shrink-0 ${isMine ? 'text-white hover:text-blue-100' : 'text-gray-500 hover:text-gray-700'}`}>
+                  <Download className='w-4 h-4' />
+               </a>
+            </div>
+         )}
+
+         {msgType === 'location' && msg.location && (
+            <a href={`https://www.openstreetmap.org/?mlat=${msg.location.lat}&mlon=${msg.location.lng}#map=15/${msg.location.lat}/${msg.location.lng}`} target='_blank' rel='noopener noreferrer' className={`flex items-center gap-2 max-w-[220px] ${isMine ? 'text-white' : 'text-gray-800'}`}>
+               <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${isMine ? 'bg-blue-400' : 'bg-green-100'}`}>
+                  <MapPin className={`w-5 h-5 ${isMine ? 'text-white' : 'text-green-600'}`} />
+               </div>
+               <div className='min-w-0'>
+                  <p className='text-sm font-medium'>📍 Location</p>
+                  <p className={`text-xs truncate ${isMine ? 'text-blue-100' : 'text-gray-400'}`}>
+                     {msg.location.label || `${msg.location.lat?.toFixed(4)}, ${msg.location.lng?.toFixed(4)}`}
+                  </p>
+               </div>
+            </a>
+         )}
+
+         {hasText && (
+            <p className={`text-sm break-words whitespace-pre-wrap max-w-[260px] ${msgType !== 'text' ? 'mt-1.5' : ''}`}>{msg.text}</p>
+         )}
+      </div>
+   );
+};
 
 export default function Messaging() {
    const [selectedUserId, setSelectedUserId] = useState('');
    const [messages, setMessages] = useState([]);
    const [newMsg, setNewMsg] = useState('');
-   const [error, setError] = useState(null);
-   const [success, setSuccess] = useState(null);
+   const [isUploading, setIsUploading] = useState(false);
+   const [showAttachMenu, setShowAttachMenu] = useState(false);
+   const [contextMenu, setContextMenu] = useState(null);
+   const [forwardModal, setForwardModal] = useState(null);
+   const [replyingTo, setReplyingTo] = useState(null);
    const { user } = useAuth();
    const [users, setUsers] = useState([]);
    const params = useSearchParams();
+   const fileInputRef = useRef(null);
+   const fileTypeRef = useRef('image');
+   const msgRefs = useRef({});
+   const [highlightedId, setHighlightedId] = useState(null);
 
    const firstChatUserId = params[0]?.get('user_id');
+   const { disconnect, sendMessage: sendSocketMessage, receiveMessage } = useSocket();
 
-   const {
-      socket,
-      errorHandle,
-      disconnect,
-      sendMessage: sendSocketMessage,
-      receiveMessage,
-   } = useSocket();
-
-   const selectedUser = users.find((user) => user._id == selectedUserId);
+   const selectedUser = users.find((u) => u._id == selectedUserId);
    const currentUser = { id: user?.id, name: user?.username };
-   const currentMessages = messages[selectedUserId] || [];
    const messagesContainer = useRef(null);
 
+   const scrollToMessage = (replyTo) => {
+      if (!replyTo?._id) return;
+      const el = msgRefs.current[replyTo._id.toString()];
+      if (!el) return;
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setHighlightedId(replyTo._id.toString());
+      setTimeout(() => setHighlightedId(null), 1500);
+   };
+
    const autoScroll = () => {
-      if (messagesContainer.current) {
-         messagesContainer.current.scrollTop = messagesContainer.current.scrollHeight;
-      }
+      if (messagesContainer.current) messagesContainer.current.scrollTop = messagesContainer.current.scrollHeight;
    };
 
    const handleFetchMessages = async () => {
       try {
-         if (selectedUserId && (currentUser?.id || user?._id)) {
-            const response = await get(
-               `${BACKEND_API_URL}/chat/messages?senderId=${currentUser?.id || user?._id}&receiverId=${selectedUserId}`
-            );
-            const data = await response.json();
-
-            if (Array.isArray(data)) {
-               setMessages(data);
-            } else {
-               setMessages([]);
-            }
-            setTimeout(() => autoScroll(), 100);
-         }
-      } catch (error) {
-         console.log(error);
-      }
+         if (!selectedUserId || !currentUser?.id) return;
+         const response = await get(`${BACKEND_API_URL}/chat/messages?senderId=${currentUser.id}&receiverId=${selectedUserId}`);
+         const data = await response.json();
+         setMessages(Array.isArray(data) ? data : []);
+         setTimeout(() => autoScroll(), 100);
+      } catch (error) { console.log(error); }
    };
 
-   const handleFetchUser = async () => {
+   const handleFetchUsers = async () => {
       try {
          let firstChatUser = [];
          const response = await get(`${BACKEND_API_URL}/chat/users`);
          const data = await response.json();
 
          if (firstChatUserId) {
-            firstChatUser = await handleFirstChatUser();
+            try {
+               const res = await get(`${BACKEND_API_URL}/chat/first-chat-user?user_id=${firstChatUserId}`);
+               const u = await res.json();
+               if (u && !u.message) firstChatUser = [u];
+            } catch {}
          }
 
-         setUsers((prev) => {
+         setUsers(() => {
             const uniqueData = [...firstChatUser, ...(Array.isArray(data) ? data : [])].filter(
                (item, index, self) => index === self.findIndex((t) => t._id === item._id)
             );
-
-            if (firstChatUser.length > 0) {
-               setSelectedUserId(firstChatUser[0]?._id);
-            } else if (uniqueData.length > 0) {
-               setSelectedUserId(uniqueData[0]._id);
-            }
-
+            if (firstChatUser.length > 0) setSelectedUserId(firstChatUser[0]?._id);
+            else if (uniqueData.length > 0) setSelectedUserId(uniqueData[0]._id);
             return uniqueData;
          });
-      } catch (error) {
-         console.log(error);
-      }
-   };
-
-   const handleFirstChatUser = async () => {
-      try {
-         const response = await get(
-            `${BACKEND_API_URL}/chat/first-chat-user?user_id=${firstChatUserId}`
-         );
-         const data = await response.json();
-         if (data && !data.message) {
-            return [data];
-         } else {
-            return [];
-         }
-      } catch (error) {
-         console.log(error);
-         return [];
-      }
+      } catch (error) { console.log(error); }
    };
 
    useEffect(() => {
@@ -109,128 +261,235 @@ export default function Messaging() {
          setMessages((prev) => (Array.isArray(prev) ? [...prev, msg] : [msg]));
          setTimeout(() => autoScroll(), 100);
       });
-
-      handleFetchUser();
-      return () => {
-         disconnect();
-      };
+      handleFetchUsers();
+      return () => disconnect();
    }, []);
 
+   useEffect(() => { handleFetchMessages(); }, [selectedUserId]);
+
    useEffect(() => {
-      handleFetchMessages();
-   }, [selectedUserId]);
+      const handleClick = () => { setContextMenu(null); setShowAttachMenu(false); };
+      document.addEventListener('click', handleClick);
+      return () => document.removeEventListener('click', handleClick);
+   }, []);
+
+   const uploadFile = async (file) => {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await postFormData(`${BACKEND_API_URL}/chat/upload`, fd);
+      return res.json();
+   };
+
+   const handleAttachSelect = (type) => {
+      setShowAttachMenu(false);
+      if (type === 'location') { handleSendLocation(); return; }
+      fileTypeRef.current = type;
+      if (fileInputRef.current) {
+         fileInputRef.current.accept = type === 'image' ? 'image/jpeg,image/png,image/gif,image/webp' : '.pdf,.doc,.docx,.txt,.zip,.csv,.xls,.xlsx';
+         fileInputRef.current.click();
+      }
+   };
+
+   const handleFileSelected = async (e) => {
+      const file = e.target.files?.[0];
+      if (!file || !selectedUserId) return;
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      setIsUploading(true);
+      try {
+         const data = await uploadFile(file);
+         const msgObj = {
+            receiverId: selectedUserId, senderId: currentUser?.id,
+            text: '', image: data.url, type: data.type, fileName: data.fileName, fileSize: data.fileSize,
+            sender_name: currentUser?.name || 'Guest',
+            replyTo: replyingTo || undefined,
+         };
+         sendSocketMessage('SendMessage', msgObj);
+         setMessages((prev) => (Array.isArray(prev) ? [...prev, msgObj] : [msgObj]));
+         setReplyingTo(null);
+         setTimeout(() => autoScroll(), 100);
+      } catch { toast.error('Failed to upload file'); }
+      finally { setIsUploading(false); }
+   };
+
+   const handleSendLocation = () => {
+      if (!navigator.geolocation) { toast.error('Geolocation not supported'); return; }
+      navigator.geolocation.getCurrentPosition(
+         (pos) => {
+            const msgObj = {
+               receiverId: selectedUserId, senderId: currentUser?.id,
+               text: '', type: 'location',
+               location: { lat: pos.coords.latitude, lng: pos.coords.longitude, label: '' },
+               sender_name: currentUser?.name || 'Guest',
+               replyTo: replyingTo || undefined,
+            };
+            sendSocketMessage('SendMessage', msgObj);
+            setMessages((prev) => (Array.isArray(prev) ? [...prev, msgObj] : [msgObj]));
+            setReplyingTo(null);
+            setTimeout(() => autoScroll(), 100);
+         },
+         () => toast.error('Location access denied'),
+         { enableHighAccuracy: true }
+      );
+   };
 
    const sendMessage = () => {
       if (!newMsg.trim()) return;
-      if (!selectedUserId) {
-         toast.error('Please select a user to send your message to.');
-         return;
-      }
+      if (!selectedUserId) { toast.error('Select a user first'); return; }
       const msgObj = {
-         receiverId: selectedUserId,
-         senderId: currentUser?.id || user?._id,
-         text: newMsg,
-         sender_name: currentUser?.name || user?.username || "Guest",
+         receiverId: selectedUserId, senderId: currentUser?.id,
+         text: newMsg, type: 'text',
+         sender_name: currentUser?.name || 'Guest',
+         replyTo: replyingTo ? {
+            _id: replyingTo._id,
+            text: replyingTo.text,
+            senderName: replyingTo.senderName,
+            type: replyingTo.type || 'text',
+         } : undefined,
       };
-      
+      sendSocketMessage('SendMessage', msgObj);
+      setMessages((prev) => (Array.isArray(prev) ? [...prev, msgObj] : [msgObj]));
+      setNewMsg('');
+      setReplyingTo(null);
+      setTimeout(() => autoScroll(), 100);
+   };
+
+   const handleContextMenu = (e, msg, idx) => {
+      e.preventDefault();
+      setContextMenu({ x: e.clientX, y: e.clientY, msg, idx });
+   };
+
+   const handleCopy = () => {
+      if (contextMenu?.msg?.text) navigator.clipboard.writeText(contextMenu.msg.text);
+      toast.success('Copied');
+      setContextMenu(null);
+   };
+
+   const handleReply = () => {
+      const msg = contextMenu?.msg;
+      setReplyingTo({
+         _id: msg?._id,
+         text: msg?.text || null,
+         senderName: msg?.senderId === currentUser?.id ? 'You' : (selectedUser?.username || 'Them'),
+         type: msg?.type || 'text',
+      });
+      setContextMenu(null);
+   };
+
+   const handleDelete = async () => {
+      const msg = contextMenu?.msg;
+      const idx = contextMenu?.idx;
+      setContextMenu(null);
+      if (!msg?._id) { setMessages(prev => prev.filter((_, i) => i !== idx)); return; }
       try {
-         sendSocketMessage('SendMessage', msgObj);
-         setMessages((prev) => (Array.isArray(prev) ? [...prev, msgObj] : [msgObj]));
-         setNewMsg('');
-         setTimeout(() => autoScroll(), 100);
-      } catch (error) {
-         console.error('Error sending message:', error);
-      }
+         await del(`${BACKEND_API_URL}/chat/messages/${msg._id}`);
+         setMessages(prev => prev.filter(m => m._id !== msg._id));
+         toast.success('Deleted');
+      } catch { toast.error('Failed to delete'); }
+   };
+
+   const handleForwardStart = () => { setForwardModal(contextMenu?.msg); setContextMenu(null); };
+
+   const handleForward = async (targetUserId) => {
+      try {
+         await post(`${BACKEND_API_URL}/chat/forward`, { messageId: forwardModal._id, targetUserId });
+         toast.success('Message forwarded');
+      } catch { toast.error('Failed to forward'); }
+      setForwardModal(null);
    };
 
    return (
       <MainLayout>
-         <div className='flex h-[100%] w-full '>
-            <div className='w-[20%] bg-gray-100 p-4 '>
-               <h2 className='text-lg font-semibold mb-4'>Users</h2>
-               <ul className='space-y-2'>
-                  {users.map((user) => {
-                     if (user.email === currentUser?.email) return null;
+         <div className='flex h-full w-full'>
+            {/* User List */}
+            <div className='w-64 border-r border-gray-100 bg-gray-50/50 flex flex-col'>
+               <div className='p-4 border-b border-gray-100'>
+                  <h2 className='text-sm font-semibold text-gray-500 uppercase tracking-wide'>Messages</h2>
+               </div>
+               <div className='overflow-y-auto flex-1'>
+                  {users.map((u) => {
+                     if (u._id === currentUser?.id) return null;
+                     const isSelected = u._id === selectedUserId;
                      return (
-                        <li
-                           key={user._id}
-                           onClick={() => setSelectedUserId(user._id)}
-                           className='flex items-center gap-2  py-1 rounded-md hover:bg-gray-100 cursor-pointer transition'
-                        >
-                           {/* Placeholder avatar */}
-                           <div className='w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-white font-semibold uppercase'>
-                              {user?.username?.charAt(0)}
-                           </div>
-
-                           {/* Username */}
-                           <span className='text-sm font-medium text-gray-800'>
-                              {user?.username}
-                           </span>
-                        </li>
+                        <div key={u._id} onClick={() => setSelectedUserId(u._id)} className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors ${isSelected ? 'bg-blue-50 border-r-2 border-blue-500' : 'hover:bg-gray-100'}`}>
+                           <UserAvatar src={u.profilePicture ? `${BASE_URL}${u.profilePicture}` : null} username={u.username} size='sm' />
+                           <span className={`text-sm truncate ${isSelected ? 'font-semibold text-gray-900' : 'text-gray-700'}`}>{u?.username}</span>
+                        </div>
                      );
                   })}
-               </ul>
+               </div>
             </div>
 
-            {/* Chat */}
-            <div className='flex-1 flex flex-col justify-between'>
-               {/* Header */}
-               <div className='flex justify-between items-start p-4 border-b'>
-                  <div className='flex flex-col  w-[70%]'>
-                     <h3 className='font-semibold text-lg'>{selectedUser?.username}</h3>
-                     {error && (
-                        <p className='w-full text-center text-red-500 bg-red-100 p-1 rounded-md'>
-                           {error}
-                        </p>
-                     )}
-                     {success && (
-                        <p className='w-full text-center text-green-500 bg-green-100 p-1 rounded-md'>
-                           {success}
-                        </p>
-                     )}
-                  </div>
-                  <div className='text-sm text-gray-600 flex-1 flex justify-end'>
-                     {/* <strong>{selectedUser?.username}</strong> */}
-                  </div>
+            {/* Chat Area */}
+            <div className='flex-1 flex flex-col'>
+               <div className='px-5 py-3 border-b border-gray-100 flex items-center gap-3'>
+                  {selectedUser && <UserAvatar src={selectedUser.profilePicture ? `${BASE_URL}${selectedUser.profilePicture}` : null} username={selectedUser.username} size='sm' />}
+                  <h3 className='font-semibold text-gray-900'>{selectedUser?.username || 'Select a conversation'}</h3>
                </div>
 
                {/* Messages */}
-               <div
-                  ref={messagesContainer}
-                  className='flex-1 p-4 space-y-2 overflow-y-auto bg-gray-50 '
-               >
-                  {messages?.map((msg, idx) => (
-                     <div
-                        key={idx}
-                        className={`max-w-xs px-4 py-2 rounded ${
-                           msg.senderId === currentUser?.id
-                              ? 'ml-auto bg-blue-500 text-white'
-                              : 'mr-auto bg-gray-200'
-                        }`}
-                     >
-                        <span className='block text-sm'>{msg.text}</span>
-                     </div>
-                  ))}
+               <div ref={messagesContainer} className='flex-1 px-5 py-4 space-y-2 overflow-y-auto'>
+                   {messages?.map((msg, idx) => {
+                      const isMine = msg.senderId === currentUser?.id || msg.senderId?.toString() === currentUser?.id;
+                      const msgId = msg._id?.toString();
+                      return (
+                         <div
+                            key={msgId || idx}
+                            ref={el => { if (msgId) msgRefs.current[msgId] = el; }}
+                            className={`flex transition-all duration-300 ${isMine ? 'justify-end' : 'justify-start'} ${
+                               highlightedId === msgId ? 'scale-[1.02] brightness-95' : ''
+                            }`}
+                            onContextMenu={(e) => handleContextMenu(e, msg, idx)}
+                         >
+                            <MessageBubble
+                               msg={msg}
+                               isMine={isMine}
+                               onQuoteClick={() => scrollToMessage(msg.replyTo)}
+                            />
+                         </div>
+                      );
+                   })}
                </div>
 
+               {/* Reply bar */}
+               {replyingTo && <ReplyBar replyingTo={replyingTo} onCancel={() => setReplyingTo(null)} />}
+
                {/* Input */}
-               <div className='p-4 border-t flex gap-2 border-blue-500'>
+               <div className='px-5 py-3 border-t border-gray-100 flex items-center gap-2'>
+                  <div className='relative'>
+                     <button onClick={(e) => { e.stopPropagation(); setShowAttachMenu(!showAttachMenu); }} disabled={isUploading || !selectedUserId} className='text-gray-400 hover:text-blue-500 cursor-pointer transition-colors shrink-0 disabled:opacity-40'>
+                        <Paperclip className='w-5 h-5' />
+                     </button>
+                     {showAttachMenu && <AttachmentMenu onSelect={handleAttachSelect} />}
+                  </div>
+                  <input ref={fileInputRef} type='file' onChange={handleFileSelected} className='hidden' />
                   <input
                      type='text'
-                     className='flex-1 px-3 py-2 border border-blue-500 rounded focus:outline-none'
+                     className='flex-1 px-3 py-2 border border-gray-200 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
                      placeholder='Type a message...'
                      value={newMsg}
                      onChange={(e) => setNewMsg(e.target.value)}
                      onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
+                     disabled={!selectedUserId}
                   />
-                  <button
-                     onClick={sendMessage}
-                     className='bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700'
-                  >
-                     Send
+                  <button onClick={sendMessage} disabled={isUploading || !selectedUserId} className='w-9 h-9 bg-blue-500 text-white rounded-full flex items-center justify-center hover:bg-blue-600 transition-colors cursor-pointer shrink-0 disabled:opacity-50'>
+                     {isUploading ? <div className='w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin' /> : <Send className='w-4 h-4' />}
                   </button>
                </div>
             </div>
+
+            {contextMenu && (
+               <ContextMenu
+                  x={contextMenu.x} y={contextMenu.y}
+                  message={contextMenu.msg}
+                  isMine={contextMenu.msg.senderId === currentUser?.id}
+                  onCopy={handleCopy} onForward={handleForwardStart}
+                  onReply={handleReply} onDelete={handleDelete}
+               />
+            )}
+
+            {forwardModal && (
+               <ForwardModal users={users} currentUserId={currentUser?.id} onForward={handleForward} onClose={() => setForwardModal(null)} />
+            )}
          </div>
       </MainLayout>
    );

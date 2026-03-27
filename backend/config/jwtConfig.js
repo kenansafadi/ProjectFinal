@@ -6,5 +6,5 @@ function configError(message) {
 
 module.exports = {
     jwtKey:
-        process.env.JWT_SECRET ?? configError("environment variable JWT_KEY is missing ")
+        process.env.JWT_SECRET ?? configError("environment variable JWT_SECRET is missing")
 }

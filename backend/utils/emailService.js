@@ -68,13 +68,13 @@ const sendEmail = async (email, subject, html) => {
       const transporter = nodemailer.createTransport({
          service: 'gmail',
          auth: {
-            user: 'kensaf23@gmail.com', // process.env.EMAIL_USER,
+            user: process.env.EMAIL_USER,
             pass: process.env.EMAIL_PASS,
          },
       });
 
       const mailOptions = {
-         from: process.env.EMAIL_SENDER,
+         from: process.env.EMAIL_SENDER || process.env.EMAIL_USER,
          to: email,
          subject,
          html,

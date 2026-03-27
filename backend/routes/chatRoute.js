@@ -1,24 +1,17 @@
 const express = require("express");
-const { sendMessage, getMessages, markMessagesAsSeen } = require("../controllers/chatController");
 const authMiddleware = require("../middleware/auth");
 const { User } = require('../model/usersModel');
 const Message = require('../model/MessageModel');
+const { fileUpload } = require('../middleware/upload');
 
 const router = express.Router();
 
 router.get('/first-chat-user', authMiddleware, async (req, res) => {
    try {
-      const user_id = req.query.user_id;
-
-      const user = await User.findById(user_id, 'username email _id');
-
-      if (!user) {
-         return res.status(400).json({ message: 'User not found' });
-      }
-
-      return res.status(200).json(user);
+      const user = await User.findById(req.query.user_id, 'username email _id profilePicture');
+      if (!user) return res.status(400).json({ message: 'User not found' });
+      res.status(200).json(user);
    } catch (error) {
-      console.log('error', error);
       res.status(400).json({ message: 'Server Error' });
    }
 });
@@ -26,69 +19,98 @@ router.get('/first-chat-user', authMiddleware, async (req, res) => {
 router.get('/users', authMiddleware, async (req, res) => {
    try {
       const userId = req.user.id;
-
-      // Find distinct user IDs from messages where current user is sender or receiver
       const messages = await Message.find({
          $or: [{ senderId: userId }, { receiverId: userId }],
       });
 
-      // Extract the other user's ID from each message
       const userIds = new Set();
       messages.forEach((msg) => {
          if (msg.senderId.toString() !== userId) userIds.add(msg.senderId.toString());
          if (msg.receiverId.toString() !== userId) userIds.add(msg.receiverId.toString());
       });
 
-      // Convert Set to array
-      const chatUserIds = Array.from(userIds);
-
-      // Fetch those users' data
-      const users = await User.find({ _id: { $in: chatUserIds } }, 'username email _id');
-
+      const users = await User.find(
+         { _id: { $in: [...userIds] } },
+         'username email _id profilePicture'
+      );
       res.status(200).json(users || []);
    } catch (error) {
-      console.error('error', error);
       res.status(500).json({ message: 'Server Error' });
    }
 });
 
-//       const messages = await Message.find({
-//          $or: [
-//             { senderId: user.id, receiverId: { $in: users.map((user) => user._id) } },
-//             { receiverId: user.id, senderId: { $in: users.map((user) => user._id) } },
-//          ],
-//       });
-
-//       console.log(messages);
-
-//       // const usersWithMessages = users.map(user => {
-//       //    const userMessages = messages.filter(message => message.senderId === user.id || message.receiverId === user.id);
-//       //    return { ...user, messages: userMessages };
-//       // });
-
-//       res.status(200).json(usersWithMessages);
-//    } catch (error) {
-//       console.log('error', error);
-//    }
-// });
-
 router.get('/messages', authMiddleware, async (req, res) => {
    try {
       const { senderId, receiverId } = req.query;
-
-      const _senderId = senderId.toString();
-      const _receiverId = receiverId.toString();
       const messages = await Message.find({
          $or: [
-            { senderId: _senderId, receiverId: _receiverId },
-            { senderId: _receiverId, receiverId: _senderId },
+            { senderId: senderId.toString(), receiverId: receiverId.toString() },
+            { senderId: receiverId.toString(), receiverId: senderId.toString() },
          ],
-      });
-
+      }).sort({ createdAt: 1 });
       res.status(200).json(messages || []);
    } catch (error) {
-      console.log('error', error);
       res.status(400).json({ message: 'Server Error' });
+   }
+});
+
+router.post('/upload', authMiddleware, fileUpload.single('file'), async (req, res) => {
+   try {
+      if (!req.file) return res.status(400).json({ message: 'No file provided' });
+
+      const imageExts = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+      const ext = require('path').extname(req.file.originalname).toLowerCase();
+      const isImage = imageExts.includes(ext);
+
+      res.json({
+         url: `/uploads/${req.file.filename}`,
+         type: isImage ? 'image' : 'file',
+         fileName: req.file.originalname,
+         fileSize: req.file.size,
+      });
+   } catch (error) {
+      res.status(500).json({ message: 'Failed to upload file' });
+   }
+});
+
+router.post('/forward', authMiddleware, async (req, res) => {
+   try {
+      const { messageId, targetUserId } = req.body;
+      const original = await Message.findById(messageId);
+      if (!original) return res.status(404).json({ message: 'Message not found' });
+
+      const forwarded = new Message({
+         senderId: req.user.id,
+         receiverId: targetUserId,
+         text: original.text,
+         type: original.type,
+         image: original.image,
+         fileName: original.fileName,
+         fileSize: original.fileSize,
+         location: original.location,
+         forwarded: true,
+         originalSenderName: original.sender_name,
+         isRead: false,
+         sender_name: req.user.username || 'Unknown',
+      });
+      await forwarded.save();
+      res.status(201).json(forwarded);
+   } catch (error) {
+      res.status(500).json({ message: 'Failed to forward message' });
+   }
+});
+
+router.delete('/messages/:id', authMiddleware, async (req, res) => {
+   try {
+      const message = await Message.findById(req.params.id);
+      if (!message) return res.status(404).json({ message: 'Message not found' });
+      if (String(message.senderId) !== req.user.id) {
+         return res.status(403).json({ message: 'Can only delete your own messages' });
+      }
+      await Message.findByIdAndDelete(req.params.id);
+      res.json({ message: 'Message deleted' });
+   } catch (error) {
+      res.status(500).json({ message: 'Failed to delete message' });
    }
 });
 

@@ -8,12 +8,21 @@ const useAuth = () => {
    const { user, token, isAuthenticated } = useSelector((state) => state.auth);
 
    useEffect(() => {
-      if (token && !user) {
-         if (isTokenExpired(token)) {
-            dispatch(logout());
-         } else {
-            const decoded = decodeToken(token);
+      if (!token) return;
+
+      // Always check expiry — not just when !user
+      if (isTokenExpired(token)) {
+         dispatch(logout());
+         return;
+      }
+
+      // Rehydration edge case: token exists but user wasn't restored
+      if (!user) {
+         const decoded = decodeToken(token);
+         if (decoded) {
             dispatch(setUserFromToken({ user: decoded, token }));
+         } else {
+            dispatch(logout());
          }
       }
    }, [token, user, dispatch]);

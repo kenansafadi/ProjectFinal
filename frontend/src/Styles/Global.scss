@@ -96,25 +96,7 @@ body.dark-mode {
     }
 }
 
-button {
-    padding: 10px 15px;
-    background-color: #007bff;
-    color: #fff;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    transition: background-color 0.3s ease, transform 0.2s ease;
-    font-size: 1rem;
-}
 
-button:hover {
-    background-color: #0056b3;
-    transform: translateY(-2px);
-}
-
-button:active {
-    transform: translateY(0);
-}
 
 .pagination-container {
     grid-column: 1 / -1;
@@ -306,10 +288,7 @@ body.dark-mode footer a:hover {
         color: #555;
     }
 
-    button {
-        padding: 8px 12px;
-        font-size: 0.9rem;
-    }
+
 
     .pagination-container {
         margin-top: 10px;
@@ -348,9 +327,7 @@ body.dark-mode footer a:hover {
         font-size: 0.9rem;
     }
 
-    button {
-        font-size: 0.85rem;
-    }
+
 
     .pagination-button {
         font-size: 0.7rem;

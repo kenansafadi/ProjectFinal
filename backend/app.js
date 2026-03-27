@@ -43,39 +43,39 @@ io.on('connection', (socket) => {
       if (userId) socket.join(userId);
    });
 
-   socket.on('SendMessage', async ({ senderId, receiverId, text, sender_name }) => {
+   socket.on('SendMessage', async (msgData) => {
+      const { senderId, receiverId, text, sender_name, image, type, fileName, fileSize, location, forwarded, originalSenderName, replyTo, postLink } = msgData;
       if (!senderId || !receiverId) return;
-      
-      io.to(receiverId).emit('ReceiveMessage', {
-         senderId,
-         receiverId,
-         text,
-         isRead: false,
-      });
-      socket.to(senderId).emit('ReceiveMessage', {
-         senderId,
-         receiverId,
-         text,
-         isRead: false,
-      });
+
+      const msgPayload = { senderId, receiverId, text, image, type, fileName, fileSize, location, forwarded, originalSenderName, replyTo, postLink, isRead: false };
+
+      io.to(receiverId).emit('ReceiveMessage', msgPayload);
+      socket.to(senderId).emit('ReceiveMessage', msgPayload);
+
+      const previewText = type === 'image' ? '📷 Image'
+         : type === 'file' ? `📄 ${fileName || 'File'}`
+         : type === 'location' ? '📍 Location'
+         : type === 'post_link' ? `🔗 ${postLink?.title || 'Post'}`
+         : text;
+
       io.to(receiverId).emit('ReceiveNotification', {
          userId: receiverId,
          message: `${sender_name} sent you a message`,
          sender_name,
          read: false,
-         text,
+         text: previewText,
          senderId,
          type: 'message',
       });
 
-      const message = new Message({ senderId, receiverId, text, isRead: false, sender_name });
+      const message = new Message({ ...msgPayload, sender_name });
       await message.save();
       const notification = new Notification({
          userId: receiverId,
          message: `${sender_name} sent you a message`,
          sender_name,
          read: false,
-         text,
+         text: previewText,
          senderId,
          type: 'message',
       });
@@ -99,6 +99,8 @@ app.use(
 );
 
 app.use(express.json());
+const path = require('path');
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Routes
 const authRouter = require('./routes/auth');
@@ -107,6 +109,18 @@ const postRouter = require('./routes/postRoute');
 const chatRouter = require('./routes/chatRoute');
 const authMiddleware = require('./middleware/auth');
 const notificationRoutes = require('./routes/notificationRoutes');
+const { User } = require('./model/usersModel');
+
+// Public user lookup — no auth required
+app.get('/api/users/public/:id', async (req, res) => {
+   try {
+      const user = await User.findById(req.params.id, '_id username email profilePicture bio followers following');
+      if (!user) return res.status(404).json({ message: 'User not found' });
+      res.json(user);
+   } catch (error) {
+      res.status(400).json({ message: 'User not found' });
+   }
+});
 
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/auth', authRouter);

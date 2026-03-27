@@ -1,6 +1,5 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const { Auth } = require('../model/authModel');
 const { User } = require('../model/usersModel');
 const { hashPassword, verifyPassword, generateToken } = require('../utils/index');
 const {
@@ -109,6 +108,10 @@ const loginUser = async (email, password) => {
          throw { message: 'Account verification required', status: 400 };
       }
 
+      if (user.authProvider === 'google' && !user.password) {
+         throw { message: 'This account uses Google sign-in. Please continue with Google.', status: 400 };
+      }
+
       const isMatch = await verifyPassword(password, user.password);
       if (!isMatch) {
          throw { message: 'Invalid email or password.', status: 400 };
@@ -118,6 +121,7 @@ const loginUser = async (email, password) => {
          email: user.email,
          username: user.username,
          id: user._id,
+         profilePicture: user.profilePicture,
       };
 
       const token = generateToken(userData);

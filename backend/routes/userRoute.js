@@ -1,7 +1,7 @@
 const express = require("express");
 const authMiddleware = require("../middleware/auth");
 const { User } = require("../model/usersModel");
-const { hashPassword } = require("../utils");
+const { hashPassword, verifyPassword } = require("../utils");
 const Notification = require("../model/Notification");
 
 const router = express.Router();
@@ -42,7 +42,7 @@ router.get("/me", authMiddleware, async (req, res) => {
     const user = req.user;
     const userData = await User.findById(
       user.id,
-      "profilePicture username email followers following _id",
+      "profilePicture username email bio bookmarks followers following _id",
     );
 
     if (!userData) {
@@ -55,10 +55,29 @@ router.get("/me", authMiddleware, async (req, res) => {
   }
 });
 
+const upload = require('../middleware/upload');
+
+router.post('/profile-picture', authMiddleware, upload.single('avatar'), async (req, res) => {
+   try {
+      if (!req.file) {
+         return res.status(400).json({ message: 'No image provided', status: 400 });
+      }
+      const user = await User.findById(req.user.id);
+      if (!user) return res.status(404).json({ message: 'User not found', status: 400 });
+
+      user.profilePicture = `/uploads/${req.file.filename}`;
+      await user.save();
+
+      res.json({ message: 'Profile picture updated', profilePicture: user.profilePicture });
+   } catch (error) {
+      res.status(500).json({ message: 'Failed to upload profile picture', status: 500 });
+   }
+});
+
 router.put("/update", authMiddleware, async (req, res) => {
   try {
     const authUser = req.user;
-    const { name, password } = req.body;
+    const { username, password, currentPassword, bio } = req.body;
     const user = await User.findById(authUser.id);
 
     if (!user) {
@@ -66,11 +85,22 @@ router.put("/update", authMiddleware, async (req, res) => {
     }
 
     if (password) {
+      if (!currentPassword) {
+        return res.status(400).json({ message: "Current password is required", status: 400 });
+      }
+      const isMatch = await verifyPassword(currentPassword, user.password);
+      if (!isMatch) {
+        return res.status(400).json({ message: "Current password is incorrect", status: 400 });
+      }
       user.password = await hashPassword(password);
     }
 
-    if (name) {
-      user.name = name;
+    if (username) {
+      user.username = username;
+    }
+
+    if (bio !== undefined) {
+      user.bio = bio;
     }
 
     await user.save();
@@ -79,11 +109,58 @@ router.put("/update", authMiddleware, async (req, res) => {
       message: "User updated successfully",
       status: 200,
       data: {
-        name: user.name,
+        username: user.username,
+        bio: user.bio,
       },
     });
   } catch (error) {
     return res.status(400).json({ message: "User not found", status: 400 });
+  }
+});
+
+// Toggle bookmark on a post
+router.post("/bookmark", authMiddleware, async (req, res) => {
+  try {
+    const { postId } = req.body;
+    if (!postId) return res.status(400).json({ message: "postId is required" });
+
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const index = user.bookmarks.indexOf(postId);
+    if (index > -1) {
+      user.bookmarks.splice(index, 1);
+      await user.save();
+      return res.json({ message: "Bookmark removed", bookmarked: false, bookmarks: user.bookmarks });
+    }
+
+    user.bookmarks.push(postId);
+    await user.save();
+    res.json({ message: "Post bookmarked", bookmarked: true, bookmarks: user.bookmarks });
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Get bookmarked posts
+router.get("/bookmarks", authMiddleware, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const Post = require("../model/postModel");
+    const posts = await Post.find({ _id: { $in: user.bookmarks } })
+      .populate('userId', 'username profilePicture')
+      .sort({ createdAt: -1 });
+
+    const formattedPosts = posts.map(p => {
+      const postObj = p.toObject();
+      return { ...postObj, author: postObj.userId };
+    });
+
+    res.json(formattedPosts);
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
   }
 });
 

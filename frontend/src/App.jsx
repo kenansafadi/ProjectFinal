@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import Login from "./components/Auth/login";
 import Register from "./components/Auth/register";
@@ -16,6 +16,11 @@ import PublicProfile from "./pages/PublicProfile";
 import ForgotPassword from "./pages/forgotPassword";
 import ResetPassword from "./pages/resetPassword";
 import Notification from "./pages/Notifications";
+import BookmarksPage from "./pages/Bookmarks";
+import PostDetail from "./pages/PostDetail";
+import { useDispatch } from "react-redux";
+import { updateUser } from "./store/reducers/auth";
+import { get } from "./utils/request";
 
 // 🔐 Protect routes (only for logged-in users)
 const ProtectedRoute = ({ children }) => {
@@ -31,7 +36,21 @@ const GuestRoute = ({ children }) => {
 
 // main app
 const App = () => {
-  const { user } = useAuth();
+  const { isAuthenticated } = useAuth();
+  const dispatch = useDispatch();
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      get(`${import.meta.env.VITE_BACKEND_API_URL}/users/me`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data && data._id) {
+            dispatch(updateUser({ profilePicture: data.profilePicture, username: data.username }));
+          }
+        })
+        .catch(() => {});
+    }
+  }, [isAuthenticated, dispatch]);
 
   return (
     <>
@@ -89,10 +108,18 @@ const App = () => {
           }
         />
         <Route
+          path="/bookmarks"
+          element={
+            <ProtectedRoute>
+              <BookmarksPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/profile"
           element={
             <ProtectedRoute>
-              <Profile user={user} />
+              <Profile />
             </ProtectedRoute>
           }
         />
@@ -109,6 +136,14 @@ const App = () => {
           element={
             <ProtectedRoute>
               <MyPostsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/post/:id"
+          element={
+            <ProtectedRoute>
+              <PostDetail />
             </ProtectedRoute>
           }
         />

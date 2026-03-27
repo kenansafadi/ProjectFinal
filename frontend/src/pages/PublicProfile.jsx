@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Heart, HeartOff } from 'lucide-react'; // Follow/Unfollow Icons
+import { Heart, HeartOff } from 'lucide-react';
 import { ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { post, get } from '../utils/request';
 import useAuth from '../hooks/useReduxAuth';
 import MainLayout from '../components/Layout';
 import { useParams } from 'react-router-dom';
+import UserAvatar from '../components/common/UserAvatar';
 const BACKEND_API_URL = import.meta.env.VITE_BACKEND_API_URL;
 
 const UserProfile = ({}) => {
@@ -71,16 +72,18 @@ const UserProfile = ({}) => {
 
    const handleFetchUserProfile = async () => {
       try {
-         const response = await get(`${BACKEND_API_URL}/users/${id}`);
+         const response = await get(`${BACKEND_API_URL}/users/public/${id}`);
          const data = await response.json();
          setFollowers(data?.followers?.filter((follower) => follower.isAccepted));
-         setIsFollowed(data?.followers?.some((follower) => follower.userId == user.id));
+         setIsFollowed(data?.followers?.some((follower) => follower.userId == user?.id));
          setIsAccepted(
-            data?.followers?.some((follower) => follower.userId == user.id && follower.isAccepted)
+            data?.followers?.some((follower) => follower.userId == user?.id && follower.isAccepted)
          );
 
          setUserProfile(data);
-      } catch (error) {}
+      } catch (error) {
+         console.error('Failed to load user profile:', error);
+      }
    };
 
    useEffect(() => {
@@ -101,17 +104,17 @@ const UserProfile = ({}) => {
             )}
             <ArrowLeft onClick={() => navigate('/')} className='w-5 h-5 mr-2 cursor-pointer' />
             <div className='flex items-center flex-col    justify-center gap-2'>
-               <div className='w-24 h-24 rounded-full bg-gray-300 mr-4'>
-                  {/* User Avatar */}
-                  <img
-                     src={userProfile?.profilePicture}
-                     //   alt={'avatar'}
-                     className='w-full h-full rounded-full object-cover'
-                  />
-               </div>
-               <div>
+               <UserAvatar
+                   src={userProfile?.profilePicture ? (userProfile.profilePicture.startsWith('http') ? userProfile.profilePicture : `${BACKEND_API_URL.replace('/api', '')}${userProfile.profilePicture}`) : null}
+                   name={userProfile?.username}
+                   size='lg'
+                />
+               <div className='text-center'>
                   <p className='text-2xl font-semibold'>{userProfile?.username}</p>
                   <p className='text-sm text-gray-500'>{userProfile?.email}</p>
+                  {userProfile?.bio && (
+                     <p className='text-sm text-gray-600 mt-2 max-w-xs'>{userProfile.bio}</p>
+                  )}
                </div>
             </div>
 

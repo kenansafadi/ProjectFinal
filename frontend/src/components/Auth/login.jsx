@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { login } from '../../store/reducers/auth';
 import { useNavigate } from 'react-router-dom';
+import { GoogleLogin } from '@react-oauth/google';
 
 const BACKEND_API_URL = import.meta.env.VITE_BACKEND_API_URL;
 
@@ -21,9 +22,7 @@ const Login = () => {
          const { email, password } = formData;
          const response = await fetch(`${BACKEND_API_URL}/auth/login`, {
             method: 'POST',
-            headers: {
-               'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, password }),
          });
          const data = await response.json();
@@ -33,26 +32,36 @@ const Login = () => {
             return;
          }
 
-         dispatch(
-            login({
-               user: data.data.user,
-               token: data.data.token,
-               isPrivate: data.data.isPrivate,
-            })
-         );
-
-         console.log(data);
-
+         dispatch(login({ user: data.data.user, token: data.data.token, isPrivate: data.data.isPrivate }));
          navigate('/');
       } catch (error) {
-         if (error.status) {
-            setError(error.message);
-         }
+         if (error.status) setError(error.message);
          console.log(error);
       } finally {
-         setTimeout(() => {
-            setError('');
-         }, 3000);
+         setTimeout(() => setError(''), 3000);
+      }
+   };
+
+   const handleGoogleSuccess = async (credentialResponse) => {
+      try {
+         const res = await fetch(`${BACKEND_API_URL}/auth/google`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ credential: credentialResponse.credential }),
+         });
+         const data = await res.json();
+
+         if (data.status >= 400) {
+            setError(data.message);
+            return;
+         }
+
+         dispatch(login({ user: data.data.user, token: data.data.token }));
+         navigate('/');
+      } catch {
+         setError('Google sign-in failed');
+      } finally {
+         setTimeout(() => setError(''), 3000);
       }
    };
 
@@ -95,17 +104,32 @@ const Login = () => {
                   Log In
                </button>
             </form>
+
+            {/* Divider */}
+            <div className='flex items-center gap-3'>
+               <div className='h-px flex-1 bg-gray-200' />
+               <span className='text-xs text-gray-400 uppercase'>or</span>
+               <div className='h-px flex-1 bg-gray-200' />
+            </div>
+
+            {/* Google Sign In */}
+            <div className='flex justify-center'>
+               <GoogleLogin
+                  onSuccess={handleGoogleSuccess}
+                  onError={() => setError('Google sign-in failed')}
+                  text='continue_with'
+                  shape='rectangular'
+                  width='360'
+               />
+            </div>
+
             <p className='text-center text-sm text-gray-500'>
                Forgot your password?{' '}
-               <a href='/forgot-password' className='text-blue-600 hover:underline'>
-                  Reset
-               </a>
+               <a href='/forgot-password' className='text-blue-600 hover:underline'>Reset</a>
             </p>
             <p className='text-center text-sm text-gray-500'>
                Don't have an account?{' '}
-               <a href='/register' className='text-blue-600 hover:underline'>
-                  Register
-               </a>
+               <a href='/register' className='text-blue-600 hover:underline'>Register</a>
             </p>
          </div>
       </div>

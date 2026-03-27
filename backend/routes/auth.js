@@ -1,6 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const passport = require('../config/passport'); // Import passport config
 const jwt = require('jsonwebtoken');
 const { registerUser, loginUser, verify_account } = require('../controllers/authController');
 const { sendEmail, resetPassword_template } = require('../utils/emailService');
@@ -65,22 +64,51 @@ router.post('/login', async (req, res) => {
    }
 });
 
-// Google Login - Redirect to Google
-router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
+// Google ID-token sign in
+const { OAuth2Client } = require('google-auth-library');
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID || process.env.CLIENT_ID);
 
-// Google OAuth Callback
-router.get(
-   '/google/callback',
-   passport.authenticate('google', { failureRedirect: '/login' }),
-   (req, res) => {
-      const { user, token } = req.user;
-      res.json({ message: 'Google login successful', user, token });
+router.post('/google', async (req, res) => {
+   try {
+      const { credential } = req.body;
+      if (!credential) return res.status(400).json({ message: 'Missing Google credential', status: 400 });
+
+      const ticket = await googleClient.verifyIdToken({
+         idToken: credential,
+         audience: process.env.GOOGLE_CLIENT_ID || process.env.CLIENT_ID,
+      });
+      const { sub: googleId, email, name, picture } = ticket.getPayload();
+
+      let user = await User.findOne({ $or: [{ googleId }, { email }] });
+
+      if (user && !user.googleId) {
+         // Existing email user — link their Google account
+         user.googleId = googleId;
+         user.authProvider = 'google';
+         if (!user.profilePicture && picture) user.profilePicture = picture;
+         user.isVerified = true;
+         await user.save();
+      } else if (!user) {
+         user = new User({
+            username: name || email.split('@')[0],
+            email,
+            googleId,
+            authProvider: 'google',
+            isVerified: true,
+            profilePicture: picture || null,
+         });
+         await user.save();
+      }
+
+      const { generateToken } = require('../utils/index');
+      const userData = { email: user.email, username: user.username, id: user._id, profilePicture: user.profilePicture };
+      const token = generateToken(userData);
+
+      res.status(200).json({ data: { token, user: userData }, status: 200 });
+   } catch (err) {
+      console.error('Google auth error:', err);
+      res.status(401).json({ message: 'Google authentication failed', status: 401 });
    }
-);
-
-router.get('/logout', (req, res) => {
-   res.clearCookie('token'); // Clear the token from the cookie
-   res.redirect('/'); // Redirect to the homepage
 });
 
 router.post('/forgot-password', async (req, res) => {
