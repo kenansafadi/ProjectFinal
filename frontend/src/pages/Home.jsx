@@ -4,8 +4,10 @@ import useAuth from '../hooks/useReduxAuth';
 import MainLayout from '../components/Layout';
 import { get, post } from '../utils/request';
 import Post from '../components/Post';
+import PostModal from '../components/PostModal';
 import UserAvatar from '../components/common/UserAvatar';
 import { getAvatarUrl } from '../utils/avatar';
+import { Plus } from 'lucide-react';
 
 const BACKEND_API_URL = import.meta.env.VITE_BACKEND_API_URL;
 const BASE_URL = BACKEND_API_URL.replace('/api', '');
@@ -175,6 +177,8 @@ const PostPage = () => {
    const [isLoadingMore, setIsLoadingMore] = useState(false);
    const { user } = useAuth();
 
+   const [newPostModalOpen, setNewPostModalOpen] = useState(false);
+
    const fetchPosts = async (page = 1, append = false) => {
       try {
          if (page === 1) setIsLoading(true);
@@ -258,6 +262,17 @@ const PostPage = () => {
             {/* Feed column */}
             <div className='flex-1 overflow-y-auto h-full'>
                <div className='flex flex-col gap-4 py-2 pr-1'>
+                  {/* New Post Button */}
+                  <div className='bg-white rounded-xl p-4 shadow-sm'>
+                     <button
+                        onClick={() => setNewPostModalOpen(true)}
+                        className='flex items-center gap-2 w-full text-left text-gray-500 hover:text-gray-700 transition-colors'
+                     >
+                        <Plus className='w-5 h-5' />
+                        <span>Create a new post...</span>
+                     </button>
+                  </div>
+
                   {isLoading ? (
                      <>
                         <SkeletonPost />
@@ -314,6 +329,14 @@ const PostPage = () => {
                </div>
             )}
          </div>
+
+         <PostModal
+            isOpen={newPostModalOpen}
+            onClose={() => {
+               setNewPostModalOpen(false);
+               fetchPosts();
+            }}
+         />
       </MainLayout>
    );
 };
