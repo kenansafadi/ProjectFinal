@@ -406,76 +406,94 @@ export default function Messaging() {
                   <h2 className='text-sm font-semibold text-gray-500 uppercase tracking-wide'>Messages</h2>
                </div>
                <div className='overflow-y-auto flex-1'>
-                  {users.map((u) => {
-                     if (u._id === currentUser?.id) return null;
-                     const isSelected = u._id === selectedUserId;
-                     return (
-                        <div key={u._id} onClick={() => setSelectedUserId(u._id)} className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors ${isSelected ? 'bg-blue-50 border-r-2 border-blue-500' : 'hover:bg-gray-100'}`}>
-                           <UserAvatar src={u.profilePicture ? `${BASE_URL}${u.profilePicture}` : null} username={u.username} size='sm' />
-                           <span className={`text-sm truncate ${isSelected ? 'font-semibold text-gray-900' : 'text-gray-700'}`}>{u?.username}</span>
-                        </div>
-                     );
-                  })}
+                  {users.length === 0 ? (
+                     <div className='p-6 text-center text-sm text-gray-400'>
+                        <p>No connections yet.</p>
+                     </div>
+                  ) : (
+                     users.map((u) => {
+                        if (u._id === currentUser?.id) return null;
+                        const isSelected = u._id === selectedUserId;
+                        return (
+                           <div key={u._id} onClick={() => setSelectedUserId(u._id)} className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors ${isSelected ? 'bg-blue-50 border-r-2 border-blue-500' : 'hover:bg-gray-100'}`}>
+                              <UserAvatar src={u.profilePicture ? `${BASE_URL}${u.profilePicture}` : null} username={u.username} size='sm' />
+                              <span className={`text-sm truncate ${isSelected ? 'font-semibold text-gray-900' : 'text-gray-700'}`}>{u?.username}</span>
+                           </div>
+                        );
+                     })
+                  )}
                </div>
             </div>
 
             {/* Chat Area */}
-            <div className='flex-1 flex flex-col'>
-               <div className='px-5 py-3 border-b border-gray-100 flex items-center gap-3'>
-                  {selectedUser && <UserAvatar src={selectedUser.profilePicture ? `${BASE_URL}${selectedUser.profilePicture}` : null} username={selectedUser.username} size='sm' />}
-                  <h3 className='font-semibold text-gray-900'>{selectedUser?.username || 'Select a conversation'}</h3>
-               </div>
-
-               {/* Messages */}
-               <div ref={messagesContainer} className='flex-1 px-5 py-4 space-y-2 overflow-y-auto'>
-                   {messages?.map((msg, idx) => {
-                      const isMine = msg.senderId === currentUser?.id || msg.senderId?.toString() === currentUser?.id;
-                      const msgId = msg._id?.toString();
-                      return (
-                         <div
-                            key={msgId || idx}
-                            ref={el => { if (msgId) msgRefs.current[msgId] = el; }}
-                            className={`flex transition-all duration-300 ${isMine ? 'justify-end' : 'justify-start'} ${
-                               highlightedId === msgId ? 'scale-[1.02] brightness-95' : ''
-                            }`}
-                            onContextMenu={(e) => handleContextMenu(e, msg, idx)}
-                         >
-                            <MessageBubble
-                               msg={msg}
-                               isMine={isMine}
-                               onQuoteClick={() => scrollToMessage(msg.replyTo)}
-                            />
-                         </div>
-                      );
-                   })}
-               </div>
-
-               {/* Reply bar */}
-               {replyingTo && <ReplyBar replyingTo={replyingTo} onCancel={() => setReplyingTo(null)} />}
-
-               {/* Input */}
-               <div className='px-5 py-3 border-t border-gray-100 flex items-center gap-2'>
-                  <div className='relative'>
-                     <button onClick={(e) => { e.stopPropagation(); setShowAttachMenu(!showAttachMenu); }} disabled={isUploading || !selectedUserId} className='text-gray-400 hover:text-blue-500 cursor-pointer transition-colors shrink-0 disabled:opacity-40'>
-                        <Paperclip className='w-5 h-5' />
-                     </button>
-                     {showAttachMenu && <AttachmentMenu onSelect={handleAttachSelect} />}
+            {users.length > 0 ? (
+               <div className='flex-1 flex flex-col'>
+                  <div className='px-5 py-3 border-b border-gray-100 flex items-center gap-3'>
+                     {selectedUser && <UserAvatar src={selectedUser.profilePicture ? `${BASE_URL}${selectedUser.profilePicture}` : null} username={selectedUser.username} size='sm' />}
+                     <h3 className='font-semibold text-gray-900'>{selectedUser?.username || 'Select a conversation'}</h3>
                   </div>
-                  <input ref={fileInputRef} type='file' onChange={handleFileSelected} className='hidden' />
-                  <input
-                     type='text'
-                     className='flex-1 px-3 py-2 border border-gray-200 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-                     placeholder='Type a message...'
-                     value={newMsg}
-                     onChange={(e) => setNewMsg(e.target.value)}
-                     onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-                     disabled={!selectedUserId}
-                  />
-                  <button onClick={sendMessage} disabled={isUploading || !selectedUserId} className='w-9 h-9 bg-blue-500 text-white rounded-full flex items-center justify-center hover:bg-blue-600 transition-colors cursor-pointer shrink-0 disabled:opacity-50'>
-                     {isUploading ? <div className='w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin' /> : <Send className='w-4 h-4' />}
-                  </button>
+
+                  {/* Messages */}
+                  <div ref={messagesContainer} className='flex-1 px-5 py-4 space-y-2 overflow-y-auto'>
+                      {messages?.map((msg, idx) => {
+                         const isMine = msg.senderId === currentUser?.id || msg.senderId?.toString() === currentUser?.id;
+                         const msgId = msg._id?.toString();
+                         return (
+                            <div
+                               key={msgId || idx}
+                               ref={el => { if (msgId) msgRefs.current[msgId] = el; }}
+                               className={`flex transition-all duration-300 ${isMine ? 'justify-end' : 'justify-start'} ${
+                                  highlightedId === msgId ? 'scale-[1.02] brightness-95' : ''
+                               }`}
+                               onContextMenu={(e) => handleContextMenu(e, msg, idx)}
+                            >
+                               <MessageBubble
+                                  msg={msg}
+                                  isMine={isMine}
+                                  onQuoteClick={() => scrollToMessage(msg.replyTo)}
+                               />
+                            </div>
+                         );
+                      })}
+                  </div>
+
+                  {/* Reply bar */}
+                  {replyingTo && <ReplyBar replyingTo={replyingTo} onCancel={() => setReplyingTo(null)} />}
+
+                  {/* Input */}
+                  <div className='px-5 py-3 border-t border-gray-100 flex items-center gap-2'>
+                     <div className='relative'>
+                        <button onClick={(e) => { e.stopPropagation(); setShowAttachMenu(!showAttachMenu); }} disabled={isUploading || !selectedUserId} className='text-gray-400 hover:text-blue-500 cursor-pointer transition-colors shrink-0 disabled:opacity-40'>
+                           <Paperclip className='w-5 h-5' />
+                        </button>
+                        {showAttachMenu && <AttachmentMenu onSelect={handleAttachSelect} />}
+                     </div>
+                     <input ref={fileInputRef} type='file' onChange={handleFileSelected} className='hidden' />
+                     <input
+                        type='text'
+                        className='flex-1 px-3 py-2 border border-gray-200 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+                        placeholder='Type a message...'
+                        value={newMsg}
+                        onChange={(e) => setNewMsg(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
+                        disabled={!selectedUserId}
+                     />
+                     <button onClick={sendMessage} disabled={isUploading || !selectedUserId} className='w-9 h-9 bg-blue-500 text-white rounded-full flex items-center justify-center hover:bg-blue-600 transition-colors cursor-pointer shrink-0 disabled:opacity-50'>
+                        {isUploading ? <div className='w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin' /> : <Send className='w-4 h-4' />}
+                     </button>
+                  </div>
                </div>
-            </div>
+            ) : (
+               <div className='flex-1 flex flex-col items-center justify-center bg-gray-50'>
+                  <div className='w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4'>
+                     <ExternalLink className='w-8 h-8 text-blue-500' />
+                  </div>
+                  <h2 className='text-xl font-semibold text-gray-800 mb-2'>Your Messages</h2>
+                  <p className='text-gray-500 text-sm max-w-sm text-center'>
+                     You don't have any connections yet. Head to the <button onClick={() => navigate('/')} className='text-blue-500 hover:underline cursor-pointer'>Home page</button> to find people to follow!
+                  </p>
+               </div>
+            )}
 
             {contextMenu && (
                <ContextMenu
