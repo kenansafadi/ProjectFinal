@@ -1,14 +1,14 @@
 import { useState } from "react";
-import useChat from "../../hooks/useChat"; // Import the custom hook
+import useChat from "../../hooks/useChat"; 
 export default function ChatBox() {
-    const { messages, sendMessage } = useChat(); // Use the hook to get messages and sendMessage
+    const { messages, sendMessage } = useChat(); 
     const [input, setInput] = useState("");
 
-    // Send message when "Send" button is clicked
+    
     const handleSendMessage = () => {
         if (input.trim()) {
-            sendMessage(input); // Use the sendMessage from context
-            setInput(""); // Clear the input field
+            sendMessage(input); 
+            setInput(""); 
         }
     };
 
