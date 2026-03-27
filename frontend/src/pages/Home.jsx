@@ -74,18 +74,26 @@ const SuggestionCard = ({ user, onFollow }) => {
    );
 };
 
-const WhoToFollow = ({ suggestions, onFollow, onShowMore }) => {
+const WhoToFollow = ({ suggestions, onFollow, onShowMore, onShowLess, suggestionsLimit }) => {
    if (!suggestions?.length) return null;
+   const hasMore = suggestions.length === suggestionsLimit; 
+   const canShowLess = suggestionsLimit > 6;
+
    return (
-      <div className='bg-white rounded-xl border border-gray-100 shadow-sm pt-5 sticky top-0 overflow-hidden'>
-         <h3 className='text-sm font-semibold text-gray-700 px-5 mb-4'>Who to follow</h3>
-         <div className='space-y-4 px-5 pb-4'>
+      <div className='bg-white rounded-xl border border-gray-100 shadow-sm pt-5 sticky top-0 overflow-hidden flex flex-col max-h-[500px]'>
+         <h3 className='text-sm font-semibold text-gray-700 px-5 mb-4 shrink-0'>Who to follow</h3>
+         <div className='space-y-4 px-5 pb-4 overflow-y-auto flex-1'>
             {suggestions.map(u => (
                <SuggestionCard key={u._id} user={u} onFollow={onFollow} />
             ))}
          </div>
-         <div className='px-5 pb-5'>
-            <button onClick={onShowMore} className='text-xs font-medium text-gray-400 hover:text-gray-700 transition-colors cursor-pointer'>Show more</button>
+         <div className='px-5 py-4 border-t border-gray-50 flex gap-4 shrink-0'>
+            {hasMore && (
+               <button onClick={onShowMore} className='text-xs font-medium text-gray-400 hover:text-gray-700 transition-colors cursor-pointer'>Show more</button>
+            )}
+            {canShowLess && (
+               <button onClick={onShowLess} className='text-xs font-medium text-gray-400 hover:text-gray-700 transition-colors cursor-pointer'>Show less</button>
+            )}
          </div>
       </div>
    );
@@ -116,6 +124,11 @@ const PostPage = () => {
       const next = suggestionsLimit + 6;
       setSuggestionsLimit(next);
       fetchPosts(next);
+   };
+
+   const handleShowLess = () => {
+      setSuggestionsLimit(6);
+      fetchPosts(6);
    };
 
    const fetchBookmarks = async () => {
@@ -176,7 +189,13 @@ const PostPage = () => {
             {/* Right sidebar — sticky, always visible */}
             {suggestions.length > 0 && (
                <div className='w-72 shrink-0 py-2'>
-            <WhoToFollow suggestions={suggestions} onFollow={fetchPosts} onShowMore={handleShowMore} />
+                  <WhoToFollow 
+                     suggestions={suggestions} 
+                     onFollow={fetchPosts} 
+                     onShowMore={handleShowMore} 
+                     onShowLess={handleShowLess}
+                     suggestionsLimit={suggestionsLimit}
+                  />
                </div>
             )}
          </div>

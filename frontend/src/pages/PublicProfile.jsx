@@ -88,7 +88,7 @@ const UserProfile = ({}) => {
 
    useEffect(() => {
       handleFetchUserProfile();
-   }, []);
+   }, [id]);
 
    useEffect(() => {
       handleFetchUserProfile();
