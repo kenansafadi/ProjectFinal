@@ -9,6 +9,7 @@ import { useNotifications } from './context/NotificationContext';
 import SearchDropdown from './NavSearch';
 import UserAvatar from './common/UserAvatar';
 import { getAvatarUrl } from '../utils/avatar';
+import { post } from '../utils/request';
 
 const BACKEND_API_URL = import.meta.env.VITE_BACKEND_API_URL;
 const BASE_URL = BACKEND_API_URL?.replace('/api', '');
@@ -20,10 +21,22 @@ const Navbar = ({ onMenuToggle }) => {
    const [showNotifications, setShowNotifications] = useState(false);
    const [showUserMenu, setShowUserMenu] = useState(false);
    const [showMobileSearch, setShowMobileSearch] = useState(false);
+   const [handledRequests, setHandledRequests] = useState({});
 
    const dropdownRef = useRef();
    const navigate = useNavigate();
    const dispatch = useDispatch();
+
+   const handleFollowAction = async (e, notif, action) => {
+      e.stopPropagation();
+      const senderId = notif.senderId;
+      if (!senderId) return;
+      const endpoint = action === 'accept' ? 'accept-friend-request' : 'reject-friend-request';
+      try {
+         await post(`${BACKEND_API_URL}/users/${endpoint}`, { userId: senderId });
+         setHandledRequests(prev => ({ ...prev, [notif._id]: action }));
+      } catch { /* ignore */ }
+   };
 
    useClickOutside(dropdownRef, () => {
       setShowNotifications(false);
