@@ -1,6 +1,6 @@
 // ResetPassword.jsx
 import { useState } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
+import {useSearchParams } from 'react-router-dom';
 import { post } from '../utils/request';
 import { useNavigate } from 'react-router-dom';
 

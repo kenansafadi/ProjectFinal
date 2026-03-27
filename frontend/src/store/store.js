@@ -2,21 +2,21 @@ import { configureStore, combineReducers } from '@reduxjs/toolkit';
 import { persistStore, persistReducer } from 'redux-persist';
 import storage from 'redux-persist/lib/storage';
 import authReducer from './reducers/auth';
-// 1️⃣ Combine reducers first
+// 1️⃣ ליצור rootReducer עם כל הרדוסרים שלך
 const rootReducer = combineReducers({
   auth: authReducer,
 });
 
-// 2️⃣ Persist configuration
+// 2️קונפיגורציה ל-persist
 const persistConfig = {
   key: 'root',
   storage,
 };
 
-// 3️⃣ Create persisted reducer
+// 3️⃣ ליצור persistedReducer
 const persistedReducer = persistReducer(persistConfig, rootReducer);
 
-// 4️⃣ Configure store
+// 4️⃣ ליצור את החנות עם persistedReducer
 const store = configureStore({
   reducer: persistedReducer,
   middleware: (getDefaultMiddleware) =>

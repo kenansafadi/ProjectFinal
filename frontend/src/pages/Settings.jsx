@@ -11,7 +11,6 @@ import { updateUser } from '../store/reducers/auth';
 const BACKEND_API_URL = import.meta.env.VITE_BACKEND_API_URL;
 
 const SettingsPage = () => {
-   const { user } = useAuth();
    const dispatch = useDispatch();
    const [error, setError] = useState('');
    const [success, setSuccess] = useState('');

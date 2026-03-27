@@ -1,4 +1,3 @@
-//jwtConfig.js
 
 function configError(message) {
     throw new Error(message);

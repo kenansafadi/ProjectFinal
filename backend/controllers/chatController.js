@@ -10,55 +10,55 @@ const sendMessage = async (req, res) => {
             return res.status(400).json({ message: "Receiver and text are required" });
         }
 
-        // Create new message
+        // תצור את המסר החדש עם השולח (המשתמש הנוכחי), המקבל והטקסט
         const message = new Message({
-            sender: req.user.id,  // The user sending the message
-            receiver,             // The user receiving the message
-            text,                 // The content of the message
+            sender: req.user.id,  // ההמשתמש הנוכחי הוא השולח
+            receiver,             // המשתמש שמקבל את ההודעה
+            text,                 // התוכן של ההודעה
         });
 
-        // Save the message to the database
+        // לשמור את ההודעה במסד הנתונים ולשלוח אותה בחזרה בתגובה
         await message.save();
-        res.status(201).json(message);  // Return the newly created message
+        res.status(201).json(message);  
     } catch (error) {
-        res.status(500).json({ message: error.message });  // Catch and return any errors
+        res.status(500).json({ message: error.message });  // לתפוס ולהחזיר כל שגיאה
     }
 };
 
-// GET MESSAGES BETWEEN TWO USERS
+// לקבל את כל ההודעות בין המשתמש הנוכחי למשתמש אחר
 const getMessages = async (req, res) => {
     try {
-        const { userId } = req.params;  // Get the other user's ID from the request parameters
-        const senderId = req.user.id;  // Get the current user's ID from the request (authenticated user)
+        const { userId } = req.params;  // לקבל את מזהה המשתמש השני מהפרמטרים של הבקשה
+        const senderId = req.user.id;  // לקבל את מזהה המשתמש הנוכחי מהאובייקט של הבקשה (שנוצר על ידי האמצעי אימות)
 
-        // Find all messages between the two users
+        // למצוא את כל ההודעות שבהן המשתמש הנוכחי הוא השולח והמשתמש השני הוא המקבל, או להפך
         const messages = await Message.find({
             $or: [
-                { sender: senderId, receiver: userId },  // Messages where the current user is the sender
-                { sender: userId, receiver: senderId },  // Messages where the current user is the receiver
+                { sender: senderId, receiver: userId },  // להודעות שבהן המשתמש הנוכחי הוא השולח והמשתמש השני הוא המקבל
+                { sender: userId, receiver: senderId },  // להודעות שבהן המשתמש השני הוא השולח והמשתמש הנוכחי הוא המקבל
             ]
-        }).sort({ createdAt: 1 });  // Sort messages by creation time in ascending order
+        }).sort({ createdAt: 1 }); 
 
-        res.status(200).json(messages);  // Return the messages
+        res.status(200).json(messages);  
     } catch (error) {
-        res.status(500).json({ message: error.message });  // Catch and return any errors
+        res.status(500).json({ message: error.message });  
     }
 };
 
-// MARK MESSAGES AS SEEN
+// לסמן את כל ההודעות ממשתמש מסוים כ"נראה"
 const markMessagesAsSeen = async (req, res) => {
     try {
-        const { userId } = req.params;  // The ID of the user whose messages to mark as seen
+        const { userId } = req.params;  // לקבל את מזהה המשתמש השני מהפרמטרים של הבקשה
 
-        // Update all messages from the specified sender to the current user as "seen"
+        // לעדכן את כל ההודעות שבהן המשתמש הנוכחי הוא המקבל והמשתמש השני הוא השולח, ולסמן אותן כ"נראה"
         await Message.updateMany(
             { receiver: req.user.id, sender: userId, seen: false },
             { seen: true }
         );
 
-        res.status(200).json({ message: "Messages marked as seen" });  // Respond with success message
+        res.status(200).json({ message: "Messages marked as seen" });  // להחזיר תגובה שמאשרת שההודעות סומנו כ"נראה"
     } catch (error) {
-        res.status(500).json({ message: error.message });  // Catch and return any errors
+        res.status(500).json({ message: error.message });  
     }
 };
 

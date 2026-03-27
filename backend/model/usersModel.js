@@ -1,7 +1,8 @@
 const mongoose = require('mongoose');
 const Joi = require('joi');
 
-// Define the Mongoose Registry Schema (only for registration)
+// מגדירה את מבנה נתוני המשתמש, כולל פרטים אישיים, אימות, וקשרים חברתיים.
+
 const userSchema = new mongoose.Schema(
    {
       username: { type: String, required: true },
@@ -39,10 +40,10 @@ const userSchema = new mongoose.Schema(
    { timestamps: true }
 );
 
-// Define the Mongoose Registry Model
+// תייצוא המודל של המשתמש ושל סכמות ה-Joi לאימות נתונים
 const User = mongoose.model('User', userSchema);
 
-// Define the Joi schema for registration validation
+// קבצים של סכמות ה-Joi לאימות נתונים עבור רישום, אימות חשבון והתחברות
 const userValidationSchema = Joi.object({
    username: Joi.string().min(3).max(30).required().messages({
       'string.base': `"username" should be a type of 'text'`,

@@ -9,7 +9,7 @@ import { useParams } from 'react-router-dom';
 import UserAvatar from '../components/common/UserAvatar';
 const BACKEND_API_URL = import.meta.env.VITE_BACKEND_API_URL;
 
-const UserProfile = ({}) => {
+const UserProfile = () => {
    const [userProfile, setUserProfile] = useState({});
    const navigate = useNavigate();
    const [error, setError] = useState('');

@@ -4,7 +4,7 @@ import { logout } from '../store/reducers/auth';
 function getToken() {
    return store.getState().auth.token;
 }
-
+// פונקציה שמטפלת בתגובה של השרת ובודקת אם קיבלנו סטטוס 401 (Unauthorized). אם כן, היא מפעילה את פעולת ה-logout כדי לנקות את המידע של המשתמש מהסטור ולהחזיר אותו למסך ההתחברות.
 function handle401(response) {
    if (response.status === 401) {
       store.dispatch(logout());

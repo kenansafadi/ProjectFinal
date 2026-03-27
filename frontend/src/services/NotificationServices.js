@@ -1,7 +1,6 @@
 import socket from "../utils/socket";
 import API_BASE_URL from "../utils/api";
 
-// ✅ pass token as argument
 export const fetchNotifications = async (userId, token) => {
     const response = await fetch(`${API_BASE_URL}/notifications?userId=${userId}`, {
         method: "GET",

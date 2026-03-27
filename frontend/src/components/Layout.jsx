@@ -1,10 +1,8 @@
 import React, { useState } from 'react';
 import Sidebar from './Sidebar';
 import Navbar from './Navbar';
-import useAuth from '../hooks/useReduxAuth';
 
 const MainLayout = ({ children }) => {
-   const { user } = useAuth();
    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
    return (

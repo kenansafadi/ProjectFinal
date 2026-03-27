@@ -15,7 +15,7 @@ const registerUser = async (userData) => {
       console.log(existingUser);
 
       const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
-      const verificationExpiry = Date.now() + 24 * 60 * 60 * 1000; // 24 hours from now
+      const verificationExpiry = Date.now() + 24 * 60 * 60 * 1000; //24 שעות
 
       const verificationLink = `${process.env.FRONTEND_API_URL}/verify-account?code=${verificationCode}&email=${userData.email}`;
 
@@ -95,8 +95,7 @@ const verify_account = async (payload) => {
       throw error;
    }
 };
-
-// Controller for user login
+//קונטרולר התחברות
 const loginUser = async (email, password) => {
    try {
       const user = await User.findOne({ email });
@@ -138,19 +137,18 @@ const loginUser = async (email, password) => {
    }
 };
 
-// Forgot Password Controller
 const forgotPassword = async (email) => {
-   // Check if user exists
+//בדיקת קיום משתמש עם האימייל שנשלח
    const user = await User.findOne({ email });
    if (!user) throw new Error('User not found');
 
-   // Generate a password reset token (valid for 1 hour)
+   // יצירת טוקן ייחודי לאיפוס סיסמה עם תוקף של שעה
    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
 
-   // Construct reset link
+   // שמירת הטוקן בבסיס הנתונים או שליחתו בדוא"ל עם קישור לאיפוס סיסמה
    const resetLink = `${process.env.CLIENT_URL}/reset-password/${token}`;
 
-   // Send reset email
+   // שליחת האימייל עם קישור לאיפוס סיסמה
    await sendEmail(
       email,
       'Password Reset Request',
@@ -160,13 +158,13 @@ const forgotPassword = async (email) => {
    return 'Password reset link sent to your email.';
 };
 
-// Reset Password Controller
+// פונקציה לאיפוס סיסמה חדשה עם הטוקן שנשלח בדוא"ל
 const resetPassword = async (token, newPassword) => {
    const decoded = jwt.verify(token, process.env.JWT_SECRET);
    const user = await User.findById(decoded.userId);
    if (!user) throw new Error('Invalid token');
 
-   // Hash the new password before saving it
+   // עדכון הסיסמה החדשה לאחר הצפנה ושמירתה בבסיס הנתונים
    user.password = await hashPassword(newPassword);
    await user.save();
 

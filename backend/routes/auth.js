@@ -64,7 +64,7 @@ router.post('/login', async (req, res) => {
    }
 });
 
-// Google ID-token sign in
+// גוגל אוטנטיקציה
 const { OAuth2Client } = require('google-auth-library');
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID || process.env.CLIENT_ID);
 
@@ -82,7 +82,7 @@ router.post('/google', async (req, res) => {
       let user = await User.findOne({ $or: [{ googleId }, { email }] });
 
       if (user && !user.googleId) {
-         // Existing email user — link their Google account
+         // אם המשתמש קיים אך לא מקושר לגוגל, עדכן את הפרטים שלו
          user.googleId = googleId;
          user.authProvider = 'google';
          if (!user.profilePicture && picture) user.profilePicture = picture;
@@ -121,7 +121,7 @@ router.post('/forgot-password', async (req, res) => {
       }
 
       const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
-      const verificationExpiry = Date.now() + 24 * 60 * 60 * 1000; // 24 hours from now
+      const verificationExpiry = Date.now() + 24 * 60 * 60 * 1000; // 24 שעות
 
       const resetPasswordLink = `${process.env.FRONTEND_API_URL}/reset-password?verificationCode=${verificationCode}`;
       console.log(resetPasswordLink);

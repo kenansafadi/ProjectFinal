@@ -5,20 +5,20 @@ import { isTokenExpired } from '../utils/jwtHelper';
 
 const useSocket = (callback) => {
   const socket = useRef(null);
-  const { token } = useAuth(); // get token from Redux
+  const { token } = useAuth(); // קבלת הטוקן מה-hook של האותנטיקציה
 
   useEffect(() => {
-    // Don't connect if no token or token expired
+    // אם אין טוקן או שהטוקן פג תוקף, אל תתחבר לסוקט
     if (!token || isTokenExpired(token)) return;
 
-    // Initialize socket
+    // יצירת חיבור לסוקט עם הטוקן באותנטיקציה
     socket.current = io(import.meta.env.VITE_SOCKET_URL, {
       withCredentials: true,
       transports: ['websocket'],
-      auth: { token }, // send JWT for server-side auth
+      auth: { token }, // שליחת הטוקן לאימות בעת החיבור
     });
 
-    // Connected successfully
+    // Connected
     socket.current.on('connect', () => {
       console.log('Connected to socket server:', socket.current.id);
       if (callback) callback();
@@ -29,12 +29,12 @@ const useSocket = (callback) => {
       console.log('Disconnected from socket server:', reason);
     });
 
-    // Connection errors
+    
     socket.current.on('connect_error', (error) => {
       console.error('Socket connection error:', error.message || error);
     });
 
-    // Cleanup on unmount
+    // ניקוי החיבור בעת פירוק הקומפוננטה
     return () => {
       if (socket.current) socket.current.disconnect();
     };

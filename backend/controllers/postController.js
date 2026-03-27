@@ -1,5 +1,7 @@
 const Post = require("../model/postModel");
 
+
+// לייבא את השירות של הפוסטים כדי להשתמש בפונקציה של קבלת פוסטים עם עמודים
 const createPost = async (req, res) => {
    try {
       const { title, content } = req.body;

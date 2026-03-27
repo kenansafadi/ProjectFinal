@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { get } from '../utils/request';
-import useAuth from '../hooks/useReduxAuth';
+
 import UserAvatar from '../components/common/UserAvatar';
 const BACKEND_API_URL = import.meta.env.VITE_BACKEND_API_URL;
 
@@ -10,7 +10,6 @@ const UserProfile = () => {
    const [userProfile, setUserProfile] = useState({});
    const navigate = useNavigate();
    const [followers, setFollowers] = useState([]);
-   const { user } = useAuth();
 
    const handleFetchUserProfile = async () => {
       try {

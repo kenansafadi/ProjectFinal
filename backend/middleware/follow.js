@@ -1,5 +1,4 @@
-const User = require('../model/usersModel'); // Assuming you have a User model with a 'following' array
-// followMiddleware.js
+const User = require('../model/usersModel'); 
 module.exports = async (req, res, next) => {
     const { followId } = req.body;
     const currentUserId = req.user.id;
@@ -12,5 +11,5 @@ module.exports = async (req, res, next) => {
         return res.status(400).json({ message: "You cannot follow yourself" });
     }
 
-    next(); // Pass control to the controller
+    next(); // המשך לבקרת העוקב או לאמצעי הבא אם כל הבדיקות עברו בהצלחה
 };

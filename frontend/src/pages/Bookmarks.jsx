@@ -6,7 +6,7 @@ import Post from '../components/Post';
 import { Bookmark } from 'lucide-react';
 
 const BACKEND_API_URL = import.meta.env.VITE_BACKEND_API_URL;
-
+// דף שמציג את הפוסטים שהמשתמש סימן כסימניות (bookmarked). הוא משתמש ב-hook של האותנטיקציה כדי לקבל את המידע של המשתמש הנוכחי, ובפונקציה fetchBookmarkedPosts כדי להביא את הפוסטים המסומנים מהשרת. אם אין פוסטים מסומנים, הוא מציג הודעה מתאימה. אם יש פוסטים, הוא מציג אותם ברשימה עם הרכיב Post.
 const BookmarksPage = () => {
    const [posts, setPosts] = useState([]);
    const [loading, setLoading] = useState(true);
@@ -14,7 +14,7 @@ const BookmarksPage = () => {
 
    const fetchBookmarkedPosts = async () => {
       try {
-         const res = await get(`${BACKEND_API_URL}/users/bookmarks`);
+         const res = await get(`${BACKEND_API_URL}/users/bookmarks`); // הבקשה לשרת כדי לקבל את הפוסטים המסומנים של המשתמש הנוכחי
          const data = await res.json();
          setPosts(Array.isArray(data) ? data : []);
       } catch (error) {

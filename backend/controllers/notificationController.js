@@ -2,9 +2,9 @@ const Notification = require("../model/Notification");
 
 const getNotificationsForUser = async (req, res) => {
     try {
-        const notifications = await Notification.find({ userId: req.user.id }) // Assuming you're using JWT and storing user id in the token
-            .sort({ createdAt: -1 }) // Sort by creation date, newest first
-            .limit(10); // Limit to the latest 10 notifications or however many you need
+        const notifications = await Notification.find({ userId: req.user.id })  
+            .sort({ createdAt: -1 })
+            .limit(10); // להגביל ל-10 התראות אחרונות
 
         res.status(200).json({ data: notifications });
     } catch (err) {
@@ -13,7 +13,7 @@ const getNotificationsForUser = async (req, res) => {
     }
 };
 
-// Create notification
+// יצירת התראה חדשה
 const createNotification = async (userId, message) => {
     try {
         const newNotification = new Notification({
@@ -28,7 +28,7 @@ const createNotification = async (userId, message) => {
     }
 };
 
-// Mark notification as read
+// סימון התראה כנקראה
 const markAsRead = async (req, res) => {
     try {
         const notification = await Notification.findById(req.params.id);

@@ -1,4 +1,4 @@
-// src/components/hooks/usePost.jsx
+
 import { useContext } from "react";
 import PostContext from "../context/PostContext";
 const usePost = () => {

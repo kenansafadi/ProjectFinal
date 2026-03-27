@@ -65,7 +65,7 @@ const Post = ({ postData, isBookmarked: initialBookmarked }) => {
          onActivate();
       }
    };
-
+// פונקציה לפתיחת מודל השיתוף, שמביאה את רשימת אנשי הקשר של המשתמש כדי שיוכל לבחור עם מי לשתף את הפוסט. המודל מציג את אנשי הקשר ומאפשר למשתמש ללחוץ על אחד מהם כדי לשתף את הפוסט בהודעה פרטית. לאחר הבחירה, המודל נסגר והמשתמש מקבל אישור שהפוסט שותף בהצלחה.
    const handleShare = async () => {
       try {
          const res = await get(`${BACKEND_API_URL}/chat/users`);
@@ -76,6 +76,7 @@ const Post = ({ postData, isBookmarked: initialBookmarked }) => {
       setShareSent(null);
    };
 
+   // פונקציה לשיתוף הפוסט עם משתמש אחר דרך הודעה פרטית
    const handleShareToUser = (contactId) => {
       const msgObj = {
          receiverId: contactId,
@@ -94,13 +95,14 @@ const Post = ({ postData, isBookmarked: initialBookmarked }) => {
       setShareSent(contactId);
       setTimeout(() => setShareModalOpen(false), 800);
    };
+   
 
    const handleBookmarkToggle = async () => {
       setIsBookmarked((prev) => !prev);
       try {
          await post(`${BACKEND_API_URL}/users/bookmark`, { postId: postData?._id });
       } catch {
-         setIsBookmarked((prev) => !prev); // revert on error
+         setIsBookmarked((prev) => !prev); // לחזור למצב הקודם אם קרתה שגיאה
       }
    };
 

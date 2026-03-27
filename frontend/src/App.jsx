@@ -28,13 +28,13 @@ const ProtectedRoute = ({ children }) => {
   return isAuthenticated ? children : <Navigate to="/login" replace />;
 };
 
-// 🚫 Prevent logged-in users from accessing auth pages
+// להגן על מסלולים רק לאורחים (למשל, למנוע ממשתמשים מחוברים לגשת לדפי התחברות או הרשמה)
 const GuestRoute = ({ children }) => {
   const { isAuthenticated } = useAuth();
   return !isAuthenticated ? children : <Navigate to="/" replace />;
 };
 
-// main app
+
 const App = () => {
   const { isAuthenticated } = useAuth();
   const dispatch = useDispatch();
@@ -57,14 +57,14 @@ const App = () => {
       <Toaster position="top-right" />
 
       <Routes>
-        {/* 🔓 Public routes */}
+        {/* 🔓 מסלולים ציבוריים */}
         <Route path="/public-profile/:id" element={<PublicProfile />} />
         <Route path="/verify-account" element={<VerifyEmail />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/welcome" element={<Welcome />} />
 
-        {/* 🚫 Guest-only routes */}
+        {/* 🚫 אורחים בלבד */}
         <Route
           path="/login"
           element={
@@ -82,7 +82,7 @@ const App = () => {
           }
         />
 
-        {/* 🔐 Protected routes */}
+        {/* 🔐 מסלולים מוגנים */}
         <Route
           path="/"
           element={
@@ -148,7 +148,7 @@ const App = () => {
           }
         />
 
-        {/* 🔁 Fallback */}
+        {/* 🔁 חזרה למסך הראשי */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </>

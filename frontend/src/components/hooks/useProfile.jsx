@@ -1,4 +1,3 @@
-// src/components/hooks/useProfile.jsx
 import { useContext } from "react";
 import ProfileContext from "../context/ProfileContext";
 
@@ -9,7 +8,7 @@ const useProfile = () => {
     if (!context) {
         throw new Error("useProfile must be used within a ProfileProvider");
     }
-    return context; // Ensure this returns an object with a `user` property
+    return context; // מחזיר את כל הערכים והפונקציות מהפרופיל
 };
 
 export default useProfile;

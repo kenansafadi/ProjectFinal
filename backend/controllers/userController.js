@@ -1,6 +1,6 @@
 
 const User = require('../model/usersModel');
-const io = require('socket.io');  // Assuming socket.io is configured
+const io = require('socket.io');  
 const { createNotification } = require("../controllers/notificationController");
 
 const getCurrentUserProfile = async (req, res) => {
@@ -61,7 +61,7 @@ const deleteUser = async (req, res) => {
 };
 
 
-// GET USER PROFILE (Professional + Scalable)
+// לקבל פרופיל משתמש לפי מזהה עם אפשרות להגבלת מספר העוקבים והעוקבים המוצגים
 const getUserProfile = async (req, res) => {
     const userId = req.params.id;
     const followersLimit = parseInt(req.query.followersLimit) || 10;
@@ -70,17 +70,16 @@ const getUserProfile = async (req, res) => {
     try {
         const user = await User.findById(userId)
             .select("-password")
-            .lean(); // Makes the response faster and lighter
-
+            .lean(); // להשתמש ב-lean() כדי לקבל אובייקט פשוט ולא מסמך Mongoose
         if (!user) return res.status(404).json({ message: "User not found" });
 
-        // Populate followers
+        //לעדכן את מספר העוקבים והעוקבים המוצגים בפרופיל
         const followers = await User.find({ _id: { $in: user.followers } })
             .select("username avatar bio")
             .limit(followersLimit)
             .lean();
 
-        // Populate following
+        
         const following = await User.find({ _id: { $in: user.following } })
             .select("username avatar bio")
             .limit(followingLimit)
@@ -103,13 +102,13 @@ const getUserProfile = async (req, res) => {
 };
 
 
-// UPDATE USER PROFILE
+// עדכון פרופיל משתמש עם אפשרות לעדכון שם משתמש, אימייל וביו
 const updateUserProfile = async (req, res) => {
     try {
         const user = await User.findById(req.user.id);
         if (!user) return res.status(404).json({ message: "User not found" });
 
-        // Update fields
+        //  לעדכן רק את השדות שנשלחו בבקשה, ולהשאיר את השאר ללא שינוי
         user.username = req.body.username || user.username;
         user.email = req.body.email || user.email;
         user.bio = req.body.bio || user.bio;
@@ -134,10 +133,9 @@ const followUser = async (req, res) => {
             await currentUser.save();
             await userToFollow.save();
 
-            // Create a notification
             await createNotification(userToFollow._id, `${currentUser.username} followed you`);
 
-            // Emit notification to the user being followed
+            // שליחת התראה בזמן אמת למשתמש שעוקבים אחריו באמצעות Socket.IO
             io.to(userToFollow._id.toString()).emit("receiveNotification", {
                 message: `${currentUser.username} followed you.`,
                 link: `/profile/${currentUser._id}`
@@ -150,7 +148,7 @@ const followUser = async (req, res) => {
     }
 };
 
-// UNFOLLOW USER
+
 const unfollowUser = async (req, res) => {
     try {
         const userToUnfollow = await User.findById(req.params.id);

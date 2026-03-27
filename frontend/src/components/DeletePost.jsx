@@ -1,6 +1,7 @@
 import React from 'react';
 import { XCircleIcon } from 'lucide-react';
 
+//השרשור של הקומפוננטה הזו הוא להציג מודל של אישור מחיקה כאשר המשתמש רוצה למחוק פוסט. המודל מציג הודעה שמבקשת מהמשתמש לאשר את הפעולה, ומספק כפתורים למחיקה או לביטול. הקומפוננטה מקבלת שלושה props: isOpen (מציין אם המודל פתוח או סגור), onClose (פונקציה לסגירת המודל), ו-onDeletePost (פונקציה שמבצעת את פעולת המחיקה בפועל). הקומפוננטה משתמשת ב-XCircleIcon כדי להציג אייקון של סגירה בפינה העליונה של המודל.
 const DeleteConfirmationModal = ({ isOpen, onClose, onDeletePost }) => {
    return (
       isOpen && (
