@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useAuth from '../hooks/useReduxAuth';
 import MainLayout from '../components/Layout';
@@ -75,27 +75,62 @@ const SuggestionCard = ({ user, onFollow }) => {
    );
 };
 
-const WhoToFollow = ({ suggestions, onFollow, onShowMore, onShowLess, suggestionsLimit }) => {
+const WhoToFollow = ({ suggestions, onFollow, onShowMore, hasMore, isLoadingMore }) => {
+   const scrollRef = useRef(null);
+   const [expanded, setExpanded] = useState(false);
+
+   useEffect(() => {
+      if (!expanded) return;
+      const container = scrollRef.current;
+      if (!container) return;
+
+      const handleScroll = () => {
+         if (!container || isLoadingMore || !hasMore) return;
+         const { scrollTop, scrollHeight, clientHeight } = container;
+         const nearBottom = scrollHeight - scrollTop - clientHeight < 100;
+         if (nearBottom) {
+            onShowMore?.();
+         }
+      };
+
+      container.addEventListener('scroll', handleScroll);
+      return () => container.removeEventListener('scroll', handleScroll);
+   }, [expanded, hasMore, isLoadingMore, onShowMore]);
+
+   const handleExpand = () => {
+      setExpanded(true);
+      onShowMore?.();
+   };
+
    if (!suggestions?.length) return null;
-   const hasMore = suggestions.length === suggestionsLimit; 
-   const canShowLess = suggestionsLimit > 6;
 
    return (
       <div className='bg-white rounded-xl border border-gray-100 shadow-sm pt-5 sticky top-0 overflow-hidden flex flex-col max-h-[500px]'>
          <h3 className='text-sm font-semibold text-gray-700 px-5 mb-4 shrink-0'>Who to follow</h3>
-         <div className='space-y-4 px-5 pb-4 overflow-y-auto flex-1'>
+         <div 
+            ref={expanded ? scrollRef : null}
+            className={`space-y-4 px-5 pb-4 flex-1 ${expanded ? 'overflow-y-auto' : ''}`}
+         >
             {suggestions.map(u => (
                <SuggestionCard key={u._id} user={u} onFollow={onFollow} />
             ))}
-         </div>
-         <div className='px-5 py-4 border-t border-gray-50 flex gap-4 shrink-0'>
-            {hasMore && (
-               <button onClick={onShowMore} className='text-xs font-medium text-gray-400 hover:text-gray-700 transition-colors cursor-pointer'>Show more</button>
-            )}
-            {canShowLess && (
-               <button onClick={onShowLess} className='text-xs font-medium text-gray-400 hover:text-gray-700 transition-colors cursor-pointer'>Show less</button>
+            {isLoadingMore && (
+               <div className='flex justify-center py-3'>
+                  <div className='w-5 h-5 border-2 border-gray-200 border-t-gray-500 rounded-full animate-spin' />
+               </div>
             )}
          </div>
+         {!expanded && hasMore && (
+            <div className='px-5 py-3 border-t border-gray-50'>
+               <button 
+                  onClick={handleExpand}
+                  disabled={isLoadingMore}
+                  className='text-xs font-medium text-gray-400 hover:text-gray-700 transition-colors cursor-pointer disabled:opacity-50'
+               >
+                  {isLoadingMore ? 'Loading...' : 'Show more'}
+               </button>
+            </div>
+         )}
       </div>
    );
 };
@@ -135,31 +170,40 @@ const PostPage = () => {
    const [suggestions, setSuggestions] = useState([]);
    const [pendingRequests, setPendingRequests] = useState([]);
    const [isLoading, setIsLoading] = useState(true);
-   const [suggestionsLimit, setSuggestionsLimit] = useState(6);
+   const [suggestionsPage, setSuggestionsPage] = useState(1);
+   const [hasMoreSuggestions, setHasMoreSuggestions] = useState(true);
+   const [isLoadingMore, setIsLoadingMore] = useState(false);
    const { user } = useAuth();
 
-   const fetchPosts = async (limit = suggestionsLimit) => {
+   const fetchPosts = async (page = 1, append = false) => {
       try {
-         const res = await get(`${BACKEND_API_URL}/posts?suggestionsLimit=${limit}`);
+         if (page === 1) setIsLoading(true);
+         else setIsLoadingMore(true);
+         
+         const res = await get(`${BACKEND_API_URL}/posts?suggestionsPage=${page}`);
          const data = await res.json();
+         
+         if (append) {
+            setSuggestions(prev => [...prev, ...(Array.isArray(data.suggestions) ? data.suggestions : [])]);
+         } else {
+            setSuggestions(Array.isArray(data.suggestions) ? data.suggestions : []);
+         }
+         
          setPosts(Array.isArray(data.posts) ? data.posts : []);
-         setSuggestions(Array.isArray(data.suggestions) ? data.suggestions : []);
+         setHasMoreSuggestions(Array.isArray(data.suggestions) && data.suggestions.length > 0);
       } catch (error) {
          console.error('Error fetching posts:', error);
       } finally {
          setIsLoading(false);
+         setIsLoadingMore(false);
       }
    };
 
-   const handleShowMore = () => {
-      const next = suggestionsLimit + 6;
-      setSuggestionsLimit(next);
-      fetchPosts(next);
-   };
-
-   const handleShowLess = () => {
-      setSuggestionsLimit(6);
-      fetchPosts(6);
+   const handleLoadMore = () => {
+      if (isLoadingMore || !hasMoreSuggestions) return;
+      const nextPage = suggestionsPage + 1;
+      setSuggestionsPage(nextPage);
+      fetchPosts(nextPage, true);
    };
 
    const fetchUserData = async () => {
@@ -259,9 +303,9 @@ const PostPage = () => {
                            fetchPosts();
                            fetchUserData();
                         }}
-                        onShowMore={handleShowMore} 
-                        onShowLess={handleShowLess}
-                        suggestionsLimit={suggestionsLimit}
+                        onShowMore={handleLoadMore}
+                        hasMore={hasMoreSuggestions}
+                        isLoadingMore={isLoadingMore}
                      />
                   )}
                   {pendingRequests.length > 0 && (
