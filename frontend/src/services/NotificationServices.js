@@ -19,7 +19,7 @@ export const fetchNotifications = async (userId, token) => {
 };
 
 export const connectNotifications = (userId, token, onNewNotification) => {
-    socket.auth = { token }; // ✅ use real token (not userId anymore)
+    socket.auth = { token }; 
     socket.connect();
 
     socket.emit("register", userId);
