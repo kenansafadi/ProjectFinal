@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, createPortal } from 'react';
 import { ImagePlus, X, Send, Paperclip, MapPin, FileText, Download, CornerUpRight, Trash2, Copy, Reply, ExternalLink } from 'lucide-react';
 import useAuth from '../hooks/useReduxAuth';
 import MainLayout from '../components/Layout';
@@ -148,23 +148,38 @@ const MessageReactions = ({ reactions, isMine, onReact, isOverlay }) => {
    );
 };
 
-const ReactionPicker = ({ onReact, isMine }) => {
+const ReactionPicker = ({ onReact, parentRef }) => {
    const emojis = ['👍', '❤️', '😂', '😮', '😢'];
-   const pickerRef = useRef(null);
-   const [adjustedClass, setAdjustedClass] = useState('');
+   const [position, setPosition] = useState({ left: '50%', transform: 'translateX(-50%)' });
 
    useEffect(() => {
-      if (!pickerRef.current) return;
-      const rect = pickerRef.current.getBoundingClientRect();
+      if (!parentRef?.current) return;
+      const parentRect = parentRef.current.getBoundingClientRect();
+      const pickerWidth = 200; // approximate width
       const windowWidth = window.innerWidth;
-      let classes = [];
-      if (rect.right > windowWidth - 10) classes.push('right-0 left-auto');
-      if (rect.left < 10) classes.push('left-0 right-auto');
-      if (classes.length) setAdjustedClass(classes.join(' '));
-   }, []);
+      
+      // Center by default
+      let left = parentRect.left + parentRect.width / 2;
+      
+      // Adjust if near right edge
+      if (left + pickerWidth / 2 > windowWidth - 10) {
+         left = windowWidth - pickerWidth / 2 - 10;
+      }
+      // Adjust if near left edge  
+      if (left - pickerWidth / 2 < 10) {
+         left = pickerWidth / 2 + 10;
+      }
+      
+      setPosition({ 
+         left: `${left}px`, 
+         transform: 'translateX(-50%)',
+         position: 'fixed',
+         bottom: `${window.innerHeight - parentRect.top + 8}px`
+      });
+   }, [parentRef]);
 
    return (
-      <div ref={pickerRef} className={`absolute bottom-full mb-2 z-10 ${adjustedClass} ${isMine ? 'right-0' : 'left-0'}`}>
+      <div style={position} className='z-[300]'>
          <div className='flex gap-1 py-1.5 px-2 bg-white border border-gray-100 shadow-xl rounded-full'>
             {emojis.map(emoji => (
                <button
@@ -184,16 +199,23 @@ const MessageBubble = ({ msg, isMine, onQuoteClick, onReact }) => {
    const msgType = msg.type || (msg.image ? 'image' : 'text');
    const hasQuote = msg.replyTo?.senderName;
    const hasText = msg.text && msgType !== 'post_link';
+   const bubbleRef = useRef(null);
+   const [showPicker, setShowPicker] = useState(false);
 
    return (
       <div className='flex flex-col max-w-xs'>
-         <div className={`relative group w-fit rounded-2xl ${
-            isMine ? 'bg-blue-500 text-white rounded-br-md' : 'bg-gray-100 text-gray-800 rounded-bl-md'
-         } ${
-            msgType === 'image' && !hasText && !hasQuote ? 'p-1'
-            : msgType === 'post_link' ? 'p-0 overflow-hidden'
-            : 'px-4 py-2.5'
-         }`}>
+         <div 
+            ref={bubbleRef}
+            onMouseEnter={() => setShowPicker(true)}
+            onMouseLeave={() => setShowPicker(false)}
+            className={`relative w-fit rounded-2xl ${
+               isMine ? 'bg-blue-500 text-white rounded-br-md' : 'bg-gray-100 text-gray-800 rounded-bl-md'
+            } ${
+               msgType === 'image' && !hasText && !hasQuote ? 'p-1'
+               : msgType === 'post_link' ? 'p-0 overflow-hidden'
+               : 'px-4 py-2.5'
+            }`}
+         >
 
             {msg.forwarded && msgType !== 'post_link' && (
                <div className={`text-[11px] flex items-center gap-1 mb-1 ${isMine ? 'text-blue-100' : 'text-gray-400'}`}>
@@ -247,10 +269,11 @@ const MessageBubble = ({ msg, isMine, onQuoteClick, onReact }) => {
                <p className={`text-sm break-words whitespace-pre-wrap max-w-[260px] ${msgType !== 'text' ? 'mt-1.5' : ''}`}>{msg.text}</p>
             )}
 
-            {/* Hover reaction picker */}
-            <div className='absolute -bottom-6 left-1/2 -translate-x-1/2 hidden group-hover:block z-10'>
-               <ReactionPicker onReact={onReact} isMine={isMine} />
-            </div>
+            {/* Hover reaction picker - portal to body */}
+            {showPicker && createPortal(
+               <ReactionPicker onReact={onReact} parentRef={bubbleRef} />,
+               document.body
+            )}
 
             {/* Reactions inside bubble for non-images, below for images */}
             {msgType !== 'image' && (
