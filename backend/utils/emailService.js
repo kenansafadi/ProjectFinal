@@ -65,11 +65,11 @@ const sendResetEmail = async (emailConfig, email, resetLink) => {
 
 const sendEmail = async (email, subject, html) => {
    try {
-      const emailUser = process.env.EMAIL_USER;
+      const emailUser = process.env.EMAIL_SENDER || process.env.EMAIL_USER;
       const emailPass = process.env.EMAIL_PASS;
       
       if (!emailUser || !emailPass) {
-         throw new Error('Email configuration missing: EMAIL_USER or EMAIL_PASS not set');
+         throw new Error('Email configuration missing: EMAIL_SENDER/EMAIL_USER or EMAIL_PASS not set');
       }
       
       const transporter = nodemailer.createTransport({
@@ -81,7 +81,7 @@ const sendEmail = async (email, subject, html) => {
       });
 
       const mailOptions = {
-         from: process.env.EMAIL_SENDER || emailUser,
+         from: emailUser,
          to: email,
          subject,
          html,
